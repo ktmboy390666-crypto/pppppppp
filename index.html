@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <title>আমার হিসাব - লগইন ও ড্যাশবোর্ড</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+
+    <style>
+        body { font-family: 'Noto Sans Bengali', sans-serif; transition: background-color 0.3s; }
+        .page { position: absolute; top: 0; left: 0; width: 100%; height: 100%; transition: transform 0.3s ease-in-out; overflow-y: auto; display: none; }
+        .page-visible { transform: translateX(0); display: block; }
+        .page-hidden { transform: translateX(100%); }
+        .page-off-left { transform: translateX(-100%); }
+        .toggle-bg:after { content: ''; position: absolute; top: 2px; left: 2px; background: white; border-radius: 9999px; width: 1.25rem; height: 1.25rem; transition: transform 0.2s ease-in-out; }
+        input:checked + .toggle-bg:after { transform: translateX(100%); }
+        .scrolling-text { overflow: hidden; white-space: nowrap; background: #f0f9ff; padding: 6px 12px; border-radius: 0.5rem; margin-bottom: 16px; }
+        .scrolling-text span { display: inline-block; padding-left: 100%; animation: scroll-left 15s linear infinite; color: #1e40af; font-weight: 500; }
+        @keyframes scroll-left { 0% { transform: translateX(0%); } 100% { transform: translateX(-100%); } }
+    </style>
+
+    <script>
+        if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#00796B',
+                        'primary-light': '#B2DFDB',
+                        background: { light: '#F5F7FA', dark: '#121212' },
+                        surface: { light: '#FFFFFF', dark: '#1E1E1E' },
+                        text: {
+                            primary: { light: '#212121', dark: '#E0E0E0' },
+                            secondary: { light: '#757575', dark: '#BDBDBD' }
+                        },
+                        danger: '#D32F2F',
+                    },
+                },
+            },
+        }
+    </script>
+</head>
+
+<body class="bg-background-light dark:bg-background-dark">
+
+    <div id="login-container" class="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-700 to-purple-800 z-[100] fixed inset-0">
+        <div class="bg-white shadow-lg rounded-2xl p-6 w-80 md:w-96">
+            <h2 class="text-2xl font-bold mb-4 text-center text-gray-700">লগইন করুন</h2>
+            <input id="login-email" type="email" placeholder="ইমেইল দিন" class="w-full mb-3 p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black">
+            <input id="login-password" type="password" placeholder="পাসওয়ার্ড দিন" class="w-full mb-3 p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black">
+            <button id="login-submit-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-semibold transition">প্রবেশ করুন</button>
+            <p id="login-error-msg" class="text-red-500 text-sm mt-2 hidden text-center"></p>
+        </div>
+    </div>
+
+    <main id="main-app" class="relative max-w-md mx-auto h-screen overflow-hidden hidden">
+        <div id="dashboard" class="page tab-page">
+            <header class="sticky top-0 z-10 p-4 bg-surface-light/80 dark:bg-surface-dark/80 backdrop-blur-sm border-b border-gray-200 dark:border-gray-800">
+                <h1 class="text-xl font-bold text-center text-text-primary-light dark:text-text-primary-dark">আমার হিসাব</h1>
+            </header>
+            <div class="p-4 space-y-6 pb-28">
+                <div id="dashboard-summary" class="grid grid-cols-1 gap-4"></div>
+                <div>
+                    <h2 class="text-lg font-bold text-text-primary-light dark:text-text-primary-dark mb-3">সাম্প্রতিক চালানসমূহ</h2>
+                    <div id="ongoing-shipments-list" class="space-y-3"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="shipments-page" class="page tab-page">
+            <header class="sticky top-0 z-10 p-4 bg-surface-light/80 dark:bg-surface-dark/80 backdrop-blur-sm border-b border-gray-200 dark:border-gray-800">
+                <h1 class="text-xl font-bold text-center text-text-primary-light dark:text-text-primary-dark">আমার সকল চালান</h1>
+            </header>
+            <div class="p-4 space-y-3 pb-28" id="all-shipments-list"></div>
+        </div>
+
+        <div id="medicines-page" class="page tab-page">
+            <div class="fixed top-4 left-4 z-50">
+              <div class="relative">
+                <button id="menuBtn" class="text-gray-700 dark:text-gray-300 text-2xl focus:outline-none">⋮</button>
+                <div id="dropdownMenu" class="hidden absolute left-0 mt-2 w-40 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg shadow-lg">
+                  <button id="profileBtn" class="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">প্রোফাইল</button>
+                  <button id="logoutBtn" class="w-full text-left px-4 py-2 text-danger hover:bg-gray-100 dark:hover:bg-gray-700">লগআউট</button>
+                </div>
+              </div>
+            </div>
+
+            <div id="profileCard" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 hidden z-[60]">
+                <div class="bg-white dark:bg-surface-dark rounded-2xl p-6 w-80 relative shadow-lg">
+                  <button id="closeProfile" class="absolute top-2 right-2 text-gray-500 text-2xl">&times;</button>
+                  <div class="flex flex-col items-center text-center">
+                    <img src="https://i.ibb.co/NdSxJghH/1759806262489.png" class="rounded-full w-24 h-24 mb-4 border-2 border-primary">
+                    <h2 class="text-xl font-bold dark:text-white">DEVELOPER SHUVO</h2>
+                    <p class="text-gray-500 dark:text-gray-400 mt-2 text-sm">এই অ্যাপটি তৈরি করেছে শুভ প্রামাণিক! মুরগির ওষুধের রিয়েল-টাইম তালিকা এখানে পাবেন।</p>
+                  </div>
+                </div>
+            </div>
+
+            <div class="max-w-xl mx-auto p-6 pb-28">
+              <h2 class="text-2xl font-bold mb-4 text-center text-green-600">💊 বয়লার মুরগীর ১-৩০ দিনের ঔষধ ✴️</h2>
+              <div class="scrolling-text"><span id="scrollText">লোড হচ্ছে...</span></div>
+              <div id="medicineListContainer"></div>
+            </div>
+        </div>
+
+        <div id="settings-page" class="page tab-page">
+            <header class="sticky top-0 z-10 p-4 bg-surface-light/80 dark:bg-surface-dark/80 border-b border-gray-200 dark:border-gray-800">
+                <h1 class="text-xl font-bold text-center dark:text-white">সেটিংস</h1>
+            </header>
+            <div class="p-4 space-y-6">
+                <div class="bg-surface-light dark:bg-surface-dark rounded-lg p-4 shadow flex justify-between items-center">
+                    <span class="dark:text-white">ডার্ক মোড</span>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="theme-toggle" class="sr-only peer">
+                        <div class="w-11 h-6 bg-gray-200 rounded-full peer dark:bg-gray-700 toggle-bg"></div>
+                    </label>
+                </div>
+                <button onclick="confirmDeleteAllData()" class="w-full p-4 bg-red-100 dark:bg-red-900/20 text-danger rounded-lg font-bold flex justify-between">
+                    সব ডেটা মুছুন <span class="material-symbols-outlined">delete_forever</span>
+                </button>
+                <div class="text-center text-gray-500 text-sm">
+                    <p>আমার হিসাব v1.0.6</p>
+                    <p>Developer: SHUVO</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="add-shipment-button-container" class="fixed bottom-20 right-5 z-20">
+            <button onclick="navigate('add-shipment-page')" class="w-14 h-14 rounded-full bg-primary text-white shadow-lg flex items-center justify-center active:scale-90 transition">
+                <span class="material-symbols-outlined text-3xl">add</span>
+            </button>
+        </div>
+
+        <div id="add-shipment-page" class="page">
+            <header class="p-4 flex items-center bg-surface-light dark:bg-surface-dark border-b dark:border-gray-800">
+                <button onclick="goBack()" class="mr-4 dark:text-white"><span class="material-symbols-outlined">arrow_back</span></button>
+                <h1 id="shipment-form-title" class="text-xl font-bold dark:text-white">নতুন চালান</h1>
+            </header>
+            <div class="p-4">
+                <form id="shipment-form" class="space-y-4">
+                    <input type="hidden" id="shipment-id">
+                    <input id="shipment-name" placeholder="চালানের নাম" required class="w-full p-3 rounded-lg bg-gray-100 dark:bg-gray-700 dark:text-white">
+                    <input id="shipment-chicken-count" type="number" placeholder="মুরগির সংখ্যা" required class="w-full p-3 rounded-lg bg-gray-100 dark:bg-gray-700 dark:text-white">
+                    <input id="shipment-start-date" type="date" required class="w-full p-3 rounded-lg bg-gray-100 dark:bg-gray-700 dark:text-white">
+                    <button type="submit" class="w-full p-4 bg-primary text-white rounded-lg font-bold">সেভ করুন</button>
+                </form>
+            </div>
+        </div>
+
+        <div id="shipment-details-page" class="page">
+            <header class="sticky top-0 z-10 p-4 flex items-center justify-between bg-surface-light dark:bg-surface-dark border-b dark:border-gray-800">
+                <button onclick="goBack()" class="dark:text-white"><span class="material-symbols-outlined">arrow_back</span></button>
+                <h1 id="details-shipment-name" class="font-bold dark:text-white"></h1>
+                <button onclick="toggleOptionsMenu('shipment-options')" class="dark:text-white"><span class="material-symbols-outlined">more_vert</span></button>
+                <div id="shipment-options" class="hidden absolute right-4 mt-12 w-32 bg-white dark:bg-gray-800 shadow-xl rounded-lg z-20">
+                    <button onclick="editCurrentShipment()" class="w-full p-2 text-left border-b dark:text-white">এডিট</button>
+                    <button onclick="deleteCurrentShipment()" class="w-full p-2 text-left text-danger">ডিলিট</button>
+                </div>
+            </header>
+            <div class="p-4 space-y-4 pb-28">
+                <div id="details-summary-cards" class="grid grid-cols-2 gap-4"></div>
+                <div class="flex bg-gray-200 dark:bg-gray-800 p-1 rounded-lg">
+                    <button id="expense-tab-button" class="w-1/2 py-2 rounded-md font-bold">ব্যয়</button>
+                    <button id="income-tab-button" class="w-1/2 py-2 rounded-md font-bold">আয়</button>
+                </div>
+                <div id="expense-list-container" class="space-y-3"></div>
+                <div id="income-list-container" class="hidden space-y-3"></div>
+            </div>
+            <button id="add-entry-button" class="fixed bottom-24 right-5 w-12 h-12 bg-primary text-white rounded-full shadow-lg flex items-center justify-center"><span class="material-symbols-outlined">add</span></button>
+        </div>
+
+        <div id="add-entry-page" class="page">
+            <header class="p-4 flex items-center bg-surface-light dark:bg-surface-dark border-b dark:border-gray-800">
+                <button onclick="goBack()" class="mr-4 dark:text-white"><span class="material-symbols-outlined">arrow_back</span></button>
+                <h1 id="entry-form-title" class="text-xl font-bold dark:text-white"></h1>
+            </header>
+            <div class="p-4">
+                <form id="entry-form" class="space-y-4">
+                    <input type="hidden" id="entry-id">
+                    <div id="expense-fields">
+                        <select id="expense-type" class="w-full p-3 rounded-lg bg-gray-100 dark:bg-gray-700 dark:text-white">
+                            <option>মুরগির বাচ্চা কেনা</option>
+                            <option>খাবার খরচ</option>
+                            <option>ঔষধ ও ভিটামিন</option>
+                            <option>ইলেকট্রিক সামগ্রী</option>
+                            <option>গুড়া</option>
+                            <option>অন্যান্য</option>
+                        </select>
+                    </div>
+                    <div id="income-fields" class="hidden">
+                        <input id="income-description" placeholder="আয়ের বিবরণ" class="w-full p-3 rounded-lg bg-gray-100 dark:bg-gray-700 dark:text-white">
+                    </div>
+                    <textarea id="entry-note" placeholder="নোট (ঐচ্ছিক)" class="w-full p-3 rounded-lg bg-gray-100 dark:bg-gray-700 dark:text-white"></textarea>
+                    <input id="entry-amount" type="number" placeholder="টাকার পরিমাণ" required class="w-full p-3 rounded-lg bg-gray-100 dark:bg-gray-700 dark:text-white">
+                    <input id="entry-date" type="date" required class="w-full p-3 rounded-lg bg-gray-100 dark:bg-gray-700 dark:text-white">
+                    <button type="submit" class="w-full p-4 bg-primary text-white rounded-lg font-bold">সেভ করুন</button>
+                </form>
+            </div>
+        </div>
+
+        <nav class="absolute bottom-0 left-0 right-0 bg-surface-light/90 dark:bg-surface-dark/90 backdrop-blur-md border-t dark:border-gray-800 h-16 flex justify-around items-center">
+            <button onclick="navigateToTab('dashboard')" class="flex flex-col items-center dark:text-gray-400" id="nav-dashboard"><span class="material-symbols-outlined">dashboard</span><span class="text-[10px]">ড্যাশবোর্ড</span></button>
+            <button onclick="navigateToTab('shipments-page')" class="flex flex-col items-center dark:text-gray-400" id="nav-shipments-page"><span class="material-symbols-outlined">list_alt</span><span class="text-[10px]">চালান</span></button>
+            <button onclick="navigateToTab('medicines-page')" class="flex flex-col items-center dark:text-gray-400" id="nav-medicines-page"><span class="material-symbols-outlined">vaccines</span><span class="text-[10px]">ঔষধ</span></button>
+            <button onclick="navigateToTab('settings-page')" class="flex flex-col items-center dark:text-gray-400" id="nav-settings-page"><span class="material-symbols-outlined">settings</span><span class="text-[10px]">সেটিংস</span></button>
+        </nav>
+    </main>
+
+    <div id="confirmation-modal" class="fixed inset-0 bg-black/50 z-[100] hidden items-center justify-center p-4">
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-xs text-center">
+            <h3 id="modal-title" class="font-bold dark:text-white"></h3>
+            <p id="modal-message" class="text-sm text-gray-500 my-2"></p>
+            <div class="flex gap-3 mt-4">
+                <button onclick="modal.style.display='none'" class="flex-1 p-2 bg-gray-200 rounded-lg">বাতিল</button>
+                <button id="modal-confirm" class="flex-1 p-2 bg-danger text-white rounded-lg">হ্যাঁ</button>
+            </div>
+        </div>
+    </div>
+    <div id="toast" class="fixed bottom-24 left-1/2 -translate-x-1/2 bg-gray-900 text-white px-6 py-2 rounded-full text-sm hidden transition-all duration-300 z-[100]"></div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+        import { getDatabase, ref, set, push, onValue, get, remove } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+
+        // Firebase Config (Combined)
+        const firebaseConfig = {
+            apiKey: "AIzaSyDkqjA1Io411uidSZBLbYJlYHWGVY36zc8",
+            authDomain: "shuvo-all-tools.firebaseapp.com",
+            databaseURL: "https://polty-65ee6-default-rtdb.firebaseio.com/", // Main DB
+            projectId: "shuvo-all-tools",
+            storageBucket: "shuvo-all-tools.appspot.com",
+            appId: "1:475600173705:android:0251b1d46457dc4e806458"
+        };
+        const secondDbUrl = "https://shuvo-all-tools-default-rtdb.firebaseio.com/";
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getDatabase(app);
+        const medicineDb = getDatabase(app, secondDbUrl);
+
+        setPersistence(auth, browserLocalPersistence);
+
+        // UI Selectors
+        const loginContainer = document.getElementById('login-container');
+        const mainApp = document.getElementById('main-app');
+        const loginBtn = document.getElementById('login-submit-btn');
+        const loginError = document.getElementById('login-error-msg');
+
+        // Authentication Observer
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                loginContainer.classList.add('hidden');
+                mainApp.classList.remove('hidden');
+                initApp();
+            } else {
+                loginContainer.classList.remove('hidden');
+                mainApp.classList.add('hidden');
+            }
+        });
+
+        // Login Logic
+        loginBtn.addEventListener('click', async () => {
+            const email = document.getElementById('login-email').value;
+            const pass = document.getElementById('login-password').value;
+            loginError.classList.add('hidden');
+            try {
+                await signInWithEmailAndPassword(auth, email, pass);
+            } catch (err) {
+                loginError.textContent = "ভুল ইমেইল বা পাসওয়ার্ড!";
+                loginError.classList.remove('hidden');
+            }
+        });
+
+        // Logout Logic
+        document.getElementById('logoutBtn').addEventListener('click', () => signOut(auth));
+
+        // Global Navigation & State
+        let pageHistory = ['dashboard'];
+        let currentShipmentId = null;
+        let currentEntry = { type: null, id: null };
+        let currentDetailView = 'expense';
+
+        window.navigate = (pageId) => {
+            const current = document.getElementById(pageHistory[pageHistory.length - 1]);
+            const next = document.getElementById(pageId);
+            current.classList.replace('page-visible', 'page-off-left');
+            next.classList.remove('page-hidden', 'page-off-left');
+            next.classList.add('page-visible');
+            pageHistory.push(pageId);
+            document.getElementById('add-shipment-button-container').classList.add('hidden');
+        };
+
+        window.goBack = () => {
+            if (pageHistory.length <= 1) return;
+            const current = document.getElementById(pageHistory.pop());
+            const prevId = pageHistory[pageHistory.length - 1];
+            const prev = document.getElementById(prevId);
+            current.classList.replace('page-visible', 'page-hidden');
+            prev.classList.remove('page-off-left');
+            prev.classList.add('page-visible');
+            if (['dashboard', 'shipments-page'].includes(prevId)) {
+                document.getElementById('add-shipment-button-container').classList.remove('hidden');
+            }
+        };
+
+        window.navigateToTab = (pageId) => {
+            document.querySelectorAll('.tab-page').forEach(p => {
+                p.classList.remove('page-visible');
+                p.classList.add('page-hidden');
+            });
+            const target = document.getElementById(pageId);
+            target.classList.remove('page-hidden', 'page-off-left');
+            target.classList.add('page-visible');
+            
+            document.querySelectorAll('nav button').forEach(btn => {
+                btn.classList.toggle('text-primary', btn.id === `nav-${pageId}`);
+                btn.classList.toggle('dark:text-gray-400', btn.id !== `nav-${pageId}`);
+            });
+            
+            document.getElementById('add-shipment-button-container').classList.toggle('hidden', !['dashboard', 'shipments-page'].includes(pageId));
+            pageHistory = [pageId];
+        };
+
+        // App Initialization
+        function initApp() {
+            onValue(ref(db, 'shipments'), s => renderAllShipments(s.val()));
+            initMedicinePage();
+            setActiveDetailTab('expense');
+        }
+
+        // Data Rendering (Shipments)
+        function renderAllShipments(shipments) {
+            const list = document.getElementById('ongoing-shipments-list');
+            const allList = document.getElementById('all-shipments-list');
+            const summary = document.getElementById('dashboard-summary');
+            list.innerHTML = ''; allList.innerHTML = '';
+            
+            if (!shipments) {
+                list.innerHTML = `<p class="text-center p-4 dark:text-gray-400">কোনো চালান নেই</p>`;
+                summary.innerHTML = `<div class="bg-surface-light dark:bg-surface-dark p-4 rounded-lg shadow"><p class="text-sm dark:text-gray-400">মোট চালান</p><p class="text-2xl font-bold dark:text-white">০</p></div>`;
+                return;
+            }
+
+            const keys = Object.keys(shipments).reverse();
+            keys.forEach(k => {
+                const card = createShipmentCard(k, shipments[k]);
+                allList.appendChild(card.cloneNode(true));
+                if (list.children.length < 5) list.appendChild(card);
+            });
+            summary.innerHTML = `<div class="bg-surface-light dark:bg-surface-dark p-4 rounded-lg shadow"><p class="text-sm dark:text-gray-400">মোট চালান</p><p class="text-2xl font-bold dark:text-white">${keys.length.toLocaleString('bn-BD')}</p></div>`;
+            
+            // Re-attach clicks because of cloning
+            allList.querySelectorAll('[data-id]').forEach(el => {
+                el.onclick = () => viewShipment(el.getAttribute('data-id'));
+            });
+            list.querySelectorAll('[data-id]').forEach(el => {
+                el.onclick = () => viewShipment(el.getAttribute('data-id'));
+            });
+        }
+
+        function createShipmentCard(key, data) {
+            const div = document.createElement('div');
+            div.setAttribute('data-id', key);
+            div.className = "bg-white dark:bg-surface-dark p-4 rounded-xl shadow flex items-center gap-4 cursor-pointer active:scale-95 transition";
+            div.innerHTML = `
+                <div class="w-12 h-12 bg-primary-light flex items-center justify-center rounded-lg text-2xl">🐔</div>
+                <div class="flex-grow"><p class="font-bold dark:text-white">${data.name}</p><p class="text-xs text-gray-500">${new Date(data.startDate).toLocaleDateString('bn-BD')}</p></div>
+                <div class="text-right"><p class="text-primary font-bold">${(+data.chickenCount).toLocaleString('bn-BD')}</p><p class="text-[10px] dark:text-gray-400">মুরগি</p></div>
+            `;
+            return div;
+        }
+
+        window.viewShipment = (id) => {
+            currentShipmentId = id;
+            onValue(ref(db, `shipments/${id}`), s => {
+                if (s.exists()) renderShipmentDetails(s.val());
+            });
+            navigate('shipment-details-page');
+        };
+
+        // Medicine Page Logic
+        function initMedicinePage() {
+            onValue(ref(medicineDb, "admin_scroll_text"), s => {
+                document.getElementById('scrollText').textContent = s.val() || "স্বাগতম!";
+            });
+
+            onValue(ref(medicineDb, "admin_medicines"), snapshot => {
+                const container = document.getElementById('medicineListContainer');
+                container.innerHTML = "";
+                const data = snapshot.val();
+                if (!data) return;
+
+                const grouped = {};
+                Object.values(data).forEach(item => {
+                    item.day.split("→").forEach(d => {
+                        const day = d.trim();
+                        if (!grouped[day]) grouped[day] = [];
+                        grouped[day].push(item);
+                    });
+                });
+
+                Object.keys(grouped).sort((a,b) => a-b).forEach(day => {
+                    const section = document.createElement('div');
+                    section.innerHTML = `<h3 class="font-bold mt-4 mb-2 dark:text-white">দিন - ${day}</h3>`;
+                    grouped[day].forEach(m => {
+                        const card = document.createElement('div');
+                        card.className = "p-3 bg-white dark:bg-gray-800 rounded-lg shadow-sm border-l-4 border-primary mb-2";
+                        card.innerHTML = `<div class="flex justify-between font-bold text-sm dark:text-white"><span>${m.medicine}</span><span class="text-primary">${m.time}</span></div><p class="text-xs text-gray-500 mt-1">পরিমাণ: ${m.amount}</p>`;
+                        section.appendChild(card);
+                    });
+                    container.appendChild(section);
+                });
+            });
+        }
+
+        // Shared Functions
+        window.showToast = (msg) => {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.classList.remove('hidden');
+            setTimeout(() => t.classList.add('hidden'), 2000);
+        };
+
+        window.toggleOptionsMenu = (id) => document.getElementById(id).classList.toggle('hidden');
+
+        // Theme Toggle
+        document.getElementById('theme-toggle').addEventListener('change', (e) => {
+            document.documentElement.classList.toggle('dark', e.target.checked);
+            localStorage.setItem('theme', e.target.checked ? 'dark' : 'light');
+        });
+
+        // Initialize App UI
+        document.getElementById('theme-toggle').checked = document.documentElement.classList.contains('dark');
+        
+        // Modal and Close buttons logic
+        document.getElementById('menuBtn').onclick = () => document.getElementById('dropdownMenu').classList.toggle('hidden');
+        document.getElementById('profileBtn').onclick = () => {
+            document.getElementById('profileCard').classList.remove('hidden');
+            document.getElementById('dropdownMenu').classList.add('hidden');
+        };
+        document.getElementById('closeProfile').onclick = () => document.getElementById('profileCard').classList.add('hidden');
+
+        function setActiveDetailTab(tab) {
+            currentDetailView = tab;
+            document.getElementById('expense-tab-button').className = tab === 'expense' ? 'w-1/2 py-2 rounded-md font-bold bg-white dark:bg-surface-dark shadow' : 'w-1/2 py-2 rounded-md font-bold dark:text-gray-400';
+            document.getElementById('income-tab-button').className = tab === 'income' ? 'w-1/2 py-2 rounded-md font-bold bg-white dark:bg-surface-dark shadow' : 'w-1/2 py-2 rounded-md font-bold dark:text-gray-400';
+            document.getElementById('expense-list-container').classList.toggle('hidden', tab !== 'expense');
+            document.getElementById('income-list-container').classList.toggle('hidden', tab !== 'income');
+        }
+        document.getElementById('expense-tab-button').onclick = () => setActiveDetailTab('expense');
+        document.getElementById('income-tab-button').onclick = () => setActiveDetailTab('income');
+
+    </script>
+</body>
+</html>
