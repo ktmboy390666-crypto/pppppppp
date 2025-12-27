@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>এডমিন প্যানেল - ওষুধ ম্যানেজ + Scrolling Text</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <style>
+    /* Scrolling Text */
+    .scrolling-text {
+      overflow: hidden;
+      white-space: nowrap;
+      background: #f0f9ff;
+      padding: 6px 12px;
+      border-radius: 0.5rem;
+      margin-bottom: 16px;
+    }
+    .scrolling-text span {
+      display: inline-block;
+      padding-left: 100%;
+      animation: scroll-left 15s linear infinite;
+      color: #1e40af;
+      font-weight: 500;
+    }
+    @keyframes scroll-left {
+      0% { transform: translateX(0%); }
+      100% { transform: translateX(-100%); }
+    }
+  </style>
+</head>
+<body class="bg-gray-100 p-6">
+
+<div class="max-w-2xl mx-auto bg-white p-6 rounded-2xl shadow-lg">
+  <h2 class="text-2xl font-bold text-center text-blue-600 mb-4">🧑‍⚕️ এডমিন প্যানেল</h2>
+
+  <!-- Scrolling Text Display -->
+  <div class="scrolling-text">
+    <span id="scrollText">📌 লোড হচ্ছে...</span>
+  </div>
+
+  <!-- Scrolling Text Edit Form -->
+  <div class="mb-6">
+    <label class="block text-gray-600 font-medium mb-1">Scrolling Text আপডেট করুন:</label>
+    <div class="flex gap-2">
+      <input type="text" id="scrollInput" class="w-full border p-2 rounded" placeholder="নতুন scrolling message">
+      <button id="updateScroll" class="bg-green-500 px-4 py-2 rounded text-white hover:bg-green-600">💾 আপডেট করুন</button>
+    </div>
+  </div>
+
+  <form id="medicineForm" class="space-y-4">
+    <div>
+      <label class="block text-gray-600 font-medium">দিন:</label>
+      <input type="text" id="day" class="w-full border p-2 rounded" placeholder="যেমন: 1 বা প্রথম দিন" required>
+    </div>
+
+    <div>
+      <label class="block text-gray-600 font-medium">ওষুধের নাম:</label>
+      <input type="text" id="medicine" class="w-full border p-2 rounded" placeholder="যেমন: Napa → Paracetamol" required>
+    </div>
+
+    <div>
+      <label class="block text-gray-600 font-medium">পরিমাণ:</label>
+      <input type="text" id="amount" class="w-full border p-2 rounded" placeholder="যেমন: ১ ট্যাবলেট → ২ ট্যাবলেট" required>
+    </div>
+
+    <div>
+      <label class="block text-gray-600 font-medium">সময়:</label>
+      <select id="time" class="w-full border p-2 rounded" required>
+        <option value="">সময় বাছাই করুন</option>
+        <option value="সকাল">সকাল</option>
+        <option value="দুপুর">দুপুর</option>
+        <option value="বিকাল">বিকাল</option>
+        <option value="রাত">রাত</option>
+        <option value="সারাদিন">সারাদিন</option>
+      </select>
+    </div>
+
+    <div>
+      <label class="block text-gray-600 font-medium">বি: দ্র:</label>
+      <input type="text" id="note" class="w-full border p-2 rounded" placeholder="যদি থাকে">
+    </div>
+
+    <button type="submit" class="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600">💾 যোগ করুন / আপডেট করুন</button>
+  </form>
+
+  <h3 class="text-lg font-semibold mt-6 mb-3 text-gray-700">📋 ওষুধের তালিকা:</h3>
+  <ul id="medicineList" class="space-y-3"></ul>
+</div>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyDkqjA1Io411uidSZBLbYJlYHWGVY36zc8",
+  authDomain: "shuvo-all-tools.firebaseapp.com",
+  databaseURL: "https://shuvo-all-tools-default-rtdb.firebaseio.com/",
+  projectId: "shuvo-all-tools",
+  storageBucket: "shuvo-all-tools.appspot.com",
+  messagingSenderId: "475600173705",
+  appId: "1:475600173705:android:0251b1d46457dc4e806458"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+// ==================== Scrolling Text ====================
+const scrollTextEl = document.getElementById("scrollText");
+const scrollInput = document.getElementById("scrollInput");
+const scrollRef = db.ref("admin_scroll_text");
+
+// রিয়েলটাইম লোড
+scrollRef.on("value", snapshot => {
+  const text = snapshot.val() || "📌 কোন বার্তা নেই।";
+  scrollTextEl.textContent = text;
+  scrollInput.value = text;
+});
+
+// আপডেট বাটন
+document.getElementById("updateScroll").addEventListener("click", async () => {
+  const newText = scrollInput.value.trim();
+  if (newText) {
+    await scrollRef.set(newText);
+    alert("✅ Scrolling text আপডেট হয়েছে!");
+  }
+});
+
+// ==================== Medicine Management ====================
+const form = document.getElementById("medicineForm");
+const list = document.getElementById("medicineList");
+let editId = null;
+const medicinesRef = db.ref("admin_medicines");
+
+async function getNextSerial() {
+  const snap = await medicinesRef.once("value");
+  const data = snap.val();
+  if (!data) return 1;
+  return Math.max(...Object.values(data).map(d => d.serial || 0)) + 1;
+}
+
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const day = document.getElementById("day").value.trim();
+  const medicine = document.getElementById("medicine").value.trim();
+  const amount = document.getElementById("amount").value.trim();
+  const time = document.getElementById("time").value;
+  const note = document.getElementById("note").value.trim();
+
+  if (!day || !medicine || !amount || !time) return;
+
+  if (editId) {
+    await medicinesRef.child(editId).update({ day, medicine, amount, time, note });
+    editId = null;
+  } else {
+    const serial = await getNextSerial();
+    const newRef = medicinesRef.push();
+    await newRef.set({ id: newRef.key, serial, day, medicine, amount, time, note });
+  }
+
+  form.reset();
+});
+
+medicinesRef.on("value", snapshot => {
+  list.innerHTML = "";
+  const data = snapshot.val();
+  if (!data) {
+    list.innerHTML = "<p class='text-gray-500 text-center'>😕 কোনো তথ্য নেই</p>";
+    return;
+  }
+
+  const arr = Object.values(data)
+    .sort((a, b) => {
+      const dayA = parseInt(a.day) || a.day.charCodeAt(0);
+      const dayB = parseInt(b.day) || b.day.charCodeAt(0);
+      if (dayA !== dayB) return dayA - dayB;
+      return (a.serial || 0) - (b.serial || 0);
+    });
+
+  arr.forEach(item => {
+    const li = document.createElement("li");
+    li.className = "p-4 border rounded-lg bg-gray-50 flex justify-between items-center";
+    li.innerHTML = `
+      <div>
+        <p class="font-semibold text-gray-800">#${item.serial} - ${item.medicine}</p>
+        <p class="text-sm text-gray-600">দিন: ${item.day}, পরিমাণ: ${item.amount}, সময়: ${item.time}</p>
+        ${item.note ? `<p class="text-sm text-gray-500 italic">বি:দ্র: ${item.note}</p>` : ""}
+      </div>
+      <div class="flex gap-2">
+        <button class="bg-yellow-400 px-3 py-1 rounded text-white hover:bg-yellow-500" onclick="editItem('${item.id}')">✏️</button>
+        <button class="bg-red-500 px-3 py-1 rounded text-white hover:bg-red-600" onclick="deleteItem('${item.id}')">🗑️</button>
+      </div>
+    `;
+    list.appendChild(li);
+  });
+});
+
+async function editItem(id) {
+  const snap = await medicinesRef.child(id).once("value");
+  const item = snap.val();
+  if (!item) return;
+
+  document.getElementById("day").value = item.day;
+  document.getElementById("medicine").value = item.medicine;
+  document.getElementById("amount").value = item.amount;
+  document.getElementById("time").value = item.time;
+  document.getElementById("note").value = item.note || "";
+
+  editId = id;
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+async function deleteItem(id) {
+  if (confirm("আপনি কি নিশ্চিত ডিলিট করতে চান?")) {
+    await medicinesRef.child(id).remove();
+  }
+}
+</script>
+
+</body>
+</html>
