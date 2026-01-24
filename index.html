@@ -100,10 +100,21 @@
 
             <!-- Content -->
             <div class="max-w-xl mx-auto p-6 pb-28">
-              <h2 class="text-2xl font-bold mb-4 text-center text-green-600">💊 বয়লার মুরগীর ১ থেকে ৩০ দিনের ওষুধের তালিকা ✴️</h2>
+              <h2 class="text-2xl font-bold mb-4 text-center text-green-600">💊 বয়লার মুরগীর ওষুধ</h2>
+              
               <p class="text-center text-gray-500 dark:text-gray-400 mb-2">🕓 নিচে ওষুধের তালিকা দেখুন (রিয়েল টাইম)</p>
               <div class="scrolling-text"><span id="scrollText">Loading message...</span></div>
               <div id="medicineListContainer"></div>
+            </div>
+
+            <!-- FLOATING VIDEO BUTTON (FAB Style) -->
+            <div class="fixed bottom-24 right-5 z-40">
+                <span class="relative flex h-14 w-14">
+                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                  <button onclick="openVideoModal()" class="relative flex items-center justify-center h-14 w-14 rounded-full bg-red-600 hover:bg-red-700 text-white shadow-xl transition-transform transform hover:scale-110">
+                    <span class="material-symbols-outlined text-3xl">play_circle</span>
+                  </button>
+                </span>
             </div>
         </div>
 
@@ -115,6 +126,13 @@
                 <div><h2 class="text-sm font-bold text-primary mb-2">থিম কালার</h2><div class="bg-surface-light dark:bg-surface-dark rounded-lg shadow p-4 flex flex-wrap gap-4 justify-center"><button onclick="changeTheme('teal')" class="w-10 h-10 rounded-full bg-[#00796B] ring-2 ring-offset-2 ring-transparent focus:ring-gray-400"></button><button onclick="changeTheme('blue')" class="w-10 h-10 rounded-full bg-[#2563EB] ring-2 ring-offset-2 ring-transparent focus:ring-gray-400"></button><button onclick="changeTheme('red')" class="w-10 h-10 rounded-full bg-[#DC2626] ring-2 ring-offset-2 ring-transparent focus:ring-gray-400"></button><button onclick="changeTheme('green')" class="w-10 h-10 rounded-full bg-[#16A34A] ring-2 ring-offset-2 ring-transparent focus:ring-gray-400"></button><button onclick="changeTheme('purple')" class="w-10 h-10 rounded-full bg-[#9333EA] ring-2 ring-offset-2 ring-transparent focus:ring-gray-400"></button><button onclick="changeTheme('orange')" class="w-10 h-10 rounded-full bg-[#EA580C] ring-2 ring-offset-2 ring-transparent focus:ring-gray-400"></button></div></div>
                 <div><h2 class="text-sm font-bold text-primary mb-2">টুলস ও হিসাব</h2><div class="bg-surface-light dark:bg-surface-dark rounded-lg shadow divide-y divide-gray-100 dark:divide-gray-800"><button onclick="navigate('due-list-page')" class="w-full flex items-center justify-between p-4 text-text-primary-light dark:text-text-primary-dark hover:bg-gray-50 dark:hover:bg-gray-800 transition rounded-t-lg"><span class="font-medium flex items-center gap-3"><span class="material-symbols-outlined text-orange-600">account_balance_wallet</span> বাকির খাতা</span><span class="material-symbols-outlined text-text-secondary-light dark:text-text-secondary-dark">arrow_forward_ios</span></button><button onclick="navigate('fcr-calculator-page')" class="w-full flex items-center justify-between p-4 text-text-primary-light dark:text-text-primary-dark hover:bg-gray-50 dark:hover:bg-gray-800 transition rounded-b-lg"><span class="font-medium flex items-center gap-3"><span class="material-symbols-outlined text-purple-600">calculate</span> FCR ক্যালকুলেটর</span><span class="material-symbols-outlined text-text-secondary-light dark:text-text-secondary-dark">arrow_forward_ios</span></button></div></div>
                 <div><h2 class="text-sm font-bold text-primary mb-2">ডেটা</h2><div class="bg-surface-light dark:bg-surface-dark rounded-lg shadow"><button onclick="openPasswordModal()" class="w-full text-left flex items-center justify-between p-4 text-danger"><span class="font-medium">সব ডেটা মুছে ফেলুন</span><span class="material-symbols-outlined">lock</span></button></div></div>
+                
+                <!-- BRANDING / FOOTER SECTION -->
+                <div class="pt-8 text-center opacity-80">
+                    <h3 class="font-bold text-lg text-text-primary-light dark:text-text-primary-dark">আমার হিসাব</h3>
+                    <p class="text-sm text-text-secondary-light dark:text-text-secondary-dark">সংস্করণ ১.০.৬</p>
+                    <p class="text-xs text-gray-400 mt-1 font-mono tracking-widest">Dêvël̃ꝏper—Sʜᴜᴠᴏ〆모</p>
+                </div>
             </div>
         </div>
 
@@ -184,6 +202,18 @@
     <div id="confirmation-modal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"><div class="bg-surface-light dark:bg-surface-dark p-6 rounded-lg w-full max-w-sm"><h3 id="modal-title" class="font-bold"></h3><p id="modal-message" class="text-sm mt-2"></p><div class="flex justify-end gap-3 mt-6"><button id="modal-cancel" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded">বাতিল</button><button id="modal-confirm" class="px-4 py-2 bg-danger text-white rounded"></button></div></div></div>
     <div id="toast" class="hidden fixed bottom-20 left-1/2 -translate-x-1/2 bg-gray-900 text-white px-5 py-3 rounded-full text-sm z-50"><p id="toast-message"></p></div>
     <div id="password-modal" class="hidden fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4"><div class="bg-surface-light dark:bg-surface-dark p-6 rounded-xl w-full max-w-sm"><h3 class="font-bold mb-2">নিরাপত্তা</h3><input type="password" id="admin-password-input" placeholder="পাসওয়ার্ড" class="w-full p-3 border rounded mb-4"><div class="flex justify-end gap-3"><button onclick="closePasswordModal()" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded">বাতিল</button><button onclick="verifyPassword()" class="px-4 py-2 bg-primary text-white rounded">যাচাই</button></div></div></div>
+
+    <!-- ================= VIDEO MODAL ================= -->
+    <div id="video-modal" class="hidden fixed inset-0 bg-black/80 z-[70] flex items-center justify-center p-4">
+        <div class="bg-black w-full max-w-lg rounded-lg overflow-hidden relative shadow-2xl">
+            <button onclick="closeVideoModal()" class="absolute top-2 right-2 z-10 text-white bg-black/50 rounded-full p-1 hover:bg-red-600 transition">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+            <div class="relative pb-[56.25%] h-0">
+                <iframe id="youtube-frame" class="absolute top-0 left-0 w-full h-full" src="" title="Video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+            </div>
+        </div>
+    </div>
 
     <!-- ================= JAVASCRIPT ================= -->
     <script type="module">
@@ -284,6 +314,21 @@
         window.showToast = (msg) => { const t = document.getElementById('toast'); t.innerText = msg; t.classList.remove('hidden'); setTimeout(() => t.classList.add('hidden'), 2500); }
         window.toggleOptionsMenu = (id) => document.getElementById(id).classList.toggle('hidden');
         document.addEventListener('click', e => { if(!e.target.closest('.relative')) document.querySelectorAll('[id$="-options"]').forEach(m => m.classList.add('hidden')); });
+
+        // --- VIDEO MODAL LOGIC (GOOGLE DRIVE PREVIEW) ---
+        window.openVideoModal = () => {
+            const modal = document.getElementById('video-modal');
+            const iframe = document.getElementById('youtube-frame');
+            // Using Google Drive Preview Link
+            iframe.src = "https://drive.google.com/file/d/1ErsItnwlAp3miAbUdC-KTNR3OnHQmm5l/preview";
+            modal.classList.remove('hidden');
+        };
+        window.closeVideoModal = () => {
+            const modal = document.getElementById('video-modal');
+            const iframe = document.getElementById('youtube-frame');
+            iframe.src = ""; // Stop video
+            modal.classList.add('hidden');
+        };
 
         // --- SHIPMENTS LIST RENDER ---
         const renderShipments = (data) => { 
