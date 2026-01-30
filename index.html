@@ -4,8 +4,10 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
     <title>আমার খামার - স্মার্ট ম্যানেজার</title>
+    
     <link rel="manifest" href="manifest.json">
-        <link rel="apple-touch-icon" href="icon.png">
+    <link rel="icon" type="image/png" href="icon.png">
+    <link rel="apple-touch-icon" href="icon.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
@@ -22,7 +24,7 @@
         :root { --color-primary: #00796B; }
         body { font-family: 'Noto Sans Bengali', sans-serif; -webkit-font-smoothing: antialiased; }
         
-        /* DARK/LIGHT TRANSITION */
+        /* Transition */
         body, .page, .bg-white, .bg-gray-50, .text-gray-900, .text-gray-500 { transition: background-color 0.3s, color 0.3s, border-color 0.3s; }
 
         .page { position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow-y: auto; display: none; }
@@ -49,7 +51,7 @@
             darkMode: 'class',
             theme: { extend: { colors: { primary: '#00796B' } } } 
         }
-        // Initial Theme Check
+        // Theme Check
         if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
             document.documentElement.classList.add('dark');
         } else {
@@ -61,20 +63,38 @@
 
     <div id="auth-page" class="fixed inset-0 z-50 bg-gray-50 dark:bg-gray-900 flex flex-col justify-center items-center p-6">
         <div class="w-full max-w-sm bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700">
-            <div class="text-center mb-8">
+            <div class="text-center mb-6">
                 <div class="w-20 h-20 bg-teal-50 dark:bg-teal-900/30 rounded-full flex items-center justify-center mx-auto mb-4 text-4xl shadow-sm">🐔</div>
                 <h1 class="text-3xl font-bold text-teal-700 dark:text-teal-400">আমার হিসাব</h1>
                 <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">স্মার্ট পোল্ট্রি খামার ম্যানেজমেন্ট</p>
             </div>
+
+            <button onclick="handleGoogleLogin()" class="w-full p-3 mb-6 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl flex items-center justify-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-600 transition shadow-sm">
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="w-5 h-5" alt="Google">
+                <span class="font-bold text-gray-700 dark:text-white">Google দিয়ে লগইন করুন</span>
+            </button>
+
+            <div class="flex items-center gap-2 mb-6">
+                <div class="h-[1px] bg-gray-200 dark:bg-gray-600 flex-grow"></div>
+                <span class="text-xs text-gray-400 font-medium">অথবা ইমেইল দিয়ে</span>
+                <div class="h-[1px] bg-gray-200 dark:bg-gray-600 flex-grow"></div>
+            </div>
+
             <div id="login-form-container">
-                <input type="email" id="login-email" placeholder="ইমেইল" class="w-full p-4 mb-4 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-teal-500">
-                <input type="password" id="login-pass" placeholder="পাসওয়ার্ড" class="w-full p-4 mb-6 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-teal-500">
+                <input type="email" id="login-email" placeholder="ইমেইল" class="w-full p-4 mb-4 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-teal-500 dark:text-white">
+                <input type="password" id="login-pass" placeholder="পাসওয়ার্ড" class="w-full p-4 mb-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-teal-500 dark:text-white">
+                
+                <div class="text-right mb-6">
+                    <button onclick="handleForgotPassword()" class="text-xs text-teal-600 dark:text-teal-400 font-bold hover:underline">পাসওয়ার্ড ভুলে গেছেন?</button>
+                </div>
+
                 <button onclick="handleLogin()" class="w-full p-4 bg-teal-700 hover:bg-teal-800 text-white font-bold rounded-xl shadow-lg transition transform active:scale-95">লগইন করুন</button>
                 <p class="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">একাউন্ট নেই? <button onclick="toggleAuthMode()" class="text-teal-700 dark:text-teal-400 font-bold hover:underline">রেজিস্ট্রেশন</button></p>
             </div>
+
             <div id="register-form-container" class="hidden">
-                <input type="email" id="reg-email" placeholder="ইমেইল" class="w-full p-4 mb-4 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700">
-                <input type="password" id="reg-pass" placeholder="পাসওয়ার্ড" class="w-full p-4 mb-6 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700">
+                <input type="email" id="reg-email" placeholder="ইমেইল" class="w-full p-4 mb-4 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 dark:text-white">
+                <input type="password" id="reg-pass" placeholder="পাসওয়ার্ড" class="w-full p-4 mb-6 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 dark:text-white">
                 <button onclick="handleRegister()" class="w-full p-4 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl shadow-lg transition transform active:scale-95">রেজিস্ট্রেশন করুন</button>
                 <p class="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">একাউন্ট আছে? <button onclick="toggleAuthMode()" class="text-teal-700 dark:text-teal-400 font-bold hover:underline">লগইন</button></p>
             </div>
@@ -212,7 +232,7 @@
     <div id="pdf-overlay" class="hidden"><div id="pdf-content" style="padding:30px;font-family:'Noto Sans Bengali';background:white;color:black;"><div style="text-align:center;border-bottom:2px solid #00796B;padding-bottom:10px;margin-bottom:20px;"><h1 style="font-size:24px;color:#00796B;">আমার হিসাব</h1><p>পোল্ট্রি খামার রিপোর্ট</p></div><table style="width:100%;margin-bottom:20px;"><tr><td><h2 id="pdf-shipment-name"></h2><p id="pdf-shipment-date"></p></td><td style="text-align:right;"><span id="pdf-chicken-count"></span></td></tr></table><div style="display:flex;margin-bottom:20px;border:1px solid #ddd;"><div style="flex:1;background:#e0f7fa;padding:10px;border-right:1px solid #ddd;">আয়<br><b id="pdf-total-income"></b></div><div style="flex:1;background:#ffebee;padding:10px;border-right:1px solid #ddd;">ব্যয়<br><b id="pdf-total-expense"></b></div><div style="flex:1;background:#f1f8e9;padding:10px;">লাভ<br><b id="pdf-net-profit"></b></div></div><table class="pdf-table" style="width:100%;border-collapse:collapse;"><thead><tr style="background:#f2f2f2;"><th>তারিখ</th><th>বিবরণ</th><th>ধরন</th><th>পরিমাণ</th></tr></thead><tbody id="pdf-table-body"></tbody></table><div style="margin-top:30px;text-align:right;font-size:10px;">Dev - Shuvo</div></div></div>
 
     <script>
-        // CONFIG
+        // --- CONFIGURATION ---
         const firebaseConfig = {
             apiKey: "AIzaSyBD3Ev8Gg2yValARgfxeRlSwDWrdERmtKE",
             authDomain: "mypoltyfarm.firebaseapp.com",
@@ -226,7 +246,7 @@
         const db = firebase.database();
         const auth = firebase.auth();
 
-        // 2ND FIREBASE
+        // 2ND FIREBASE (For Medicines)
         const medicineConfig = {
             apiKey: "AIzaSyDkqjA1Io411uidSZBLbYJlYHWGVY36zc8",
             authDomain: "shuvo-all-tools.firebaseapp.com",
@@ -246,7 +266,7 @@
         let currentEntryId = null;
         let currentShipmentData = {};
 
-        // AUTH & THEME
+        // --- AUTH & THEME ---
         auth.onAuthStateChanged(user => {
             if (user) {
                 currentUser = user;
@@ -272,12 +292,39 @@
             }
         }
 
+        // GOOGLE LOGIN
+        function handleGoogleLogin() {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            auth.signInWithPopup(provider)
+                .then((result) => {
+                    showToast("স্বাগতম " + result.user.displayName);
+                }).catch((error) => {
+                    alert("সমস্যা হয়েছে: " + error.message);
+                });
+        }
+
+        // FORGOT PASSWORD
+        function handleForgotPassword() {
+            const email = document.getElementById('login-email').value;
+            if (!email) {
+                alert("দয়া করে ইমেইল বক্সে আপনার ইমেইলটি লিখুন, তারপর আবার 'পাসওয়ার্ড ভুলে গেছেন' এ ক্লিক করুন।");
+                return;
+            }
+            auth.sendPasswordResetEmail(email)
+                .then(() => {
+                    alert("আপনার ইমেইলে রিসেট লিংক পাঠানো হয়েছে! ইনবক্স বা স্প্যাম ফোল্ডার চেক করুন।");
+                })
+                .catch((error) => {
+                    alert("সমস্যা হয়েছে: " + error.message);
+                });
+        }
+
         function handleLogin() { const e=document.getElementById('login-email').value,p=document.getElementById('login-pass').value; if(e&&p)auth.signInWithEmailAndPassword(e,p).catch(err=>alert(err.message)); }
         function handleRegister() { const e=document.getElementById('reg-email').value,p=document.getElementById('reg-pass').value; if(e&&p)auth.createUserWithEmailAndPassword(e,p).catch(err=>alert(err.message)); }
         function toggleAuthMode() { document.getElementById('login-form-container').classList.toggle('hidden'); document.getElementById('register-form-container').classList.toggle('hidden'); }
         function logoutUser() { auth.signOut(); }
 
-        // DATA LOADING
+        // --- DATA LOADING ---
         function loadUserData() {
             if(!currentUser) return;
             const uid = currentUser.uid;
@@ -307,7 +354,7 @@
             });
         }
 
-        // NAV
+        // --- NAVIGATION ---
         function navigate(p) { document.querySelectorAll('.page').forEach(e=>e.classList.remove('page-visible')); document.getElementById(p).classList.add('page-visible'); pageHistory.push(p); document.getElementById('add-shipment-button-container').classList.toggle('hidden', !['dashboard','shipments-page'].includes(p)); }
         function goBack() { if(pageHistory.length>1) pageHistory.pop(); navigate(pageHistory[pageHistory.length-1]); pageHistory.pop(); }
         function navigateToTab(p) { pageHistory=[p]; navigate(p); document.querySelectorAll('.nav-item').forEach(e=>{ e.classList.remove('text-teal-700', 'dark:text-teal-400'); if(e.id===`nav-${p}`) e.classList.add('text-teal-700', 'dark:text-teal-400'); }); }
@@ -315,7 +362,7 @@
         function toggleMenu(id) { document.getElementById(id).classList.toggle('hidden'); }
         document.onclick = (e) => { if(!e.target.closest('.relative')) document.querySelectorAll('#dropdownMenu, [id^="opt-"]').forEach(el=>el.classList.add('hidden')); };
         
-        // CRUD
+        // --- CRUD ---
         function saveShipment(e) { e.preventDefault(); if(!currentUser) return alert("লগইন নেই"); const d={name:document.getElementById('shipment-name').value, chickenCount:document.getElementById('shipment-chicken-count').value, startDate:document.getElementById('shipment-start-date').value}; db.ref(`users/${currentUser.uid}/shipments`).push(d).then(()=>{showToast("সফলভাবে সেভ হয়েছে"); goBack();}); }
         function saveEntry(e) { e.preventDefault(); if(!currentUser) return; const d={amount:document.getElementById('entry-amount').value, date:document.getElementById('entry-date').value, note:document.getElementById('entry-note').value}; if(currentEntryType==='expense') d.type=document.getElementById('expense-type').value; else d.description=document.getElementById('income-description').value; const p=`users/${currentUser.uid}/shipments/${currentShipmentId}/${currentEntryType}s`; (currentEntryId?db.ref(`${p}/${currentEntryId}`).update(d):db.ref(p).push(d)).then(()=>{showToast("সেভ হয়েছে"); goBack();}); }
         function saveDue(e) { e.preventDefault(); const id=document.getElementById('due-id').value; const d={name:document.getElementById('due-name').value, mobile:document.getElementById('due-mobile').value, amount:document.getElementById('due-amount').value, date:document.getElementById('due-date').value, note:document.getElementById('due-note').value}; (id?db.ref(`users/${currentUser.uid}/due_list/${id}`).update(d):db.ref(`users/${currentUser.uid}/due_list`).push(d)).then(()=>{showToast("সেভ হয়েছে"); goBack();}); }
