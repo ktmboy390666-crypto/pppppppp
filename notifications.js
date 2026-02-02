@@ -1,131 +1,134 @@
-/* 🔔 NOTIFICATION SYSTEM MANAGER
-   এই ফাইলে সব নোটিফিকেশন কন্ট্রোল করা হয়।
+/* 🔔 SMART NOTIFICATION SYSTEM
+   এটি শুধুমাত্র দিনের সময় অনুযায়ী জরুরি পরামর্শ দেখাবে।
+   কোনো ডেমো ডাটা (যেমন: স্টক শেষ, ভ্যাকসিন) দেখাবে না।
 */
 
-// ১. নোটিফিকেশন ডাটা (এখানে আপনি নতুন নতুন মেসেজ যুক্ত করতে পারবেন)
-const notificationData = [
-    {
-        icon: '🎉', 
-        color: 'bg-green-100 text-green-600', 
-        title: 'অ্যাপে স্বাগতম!', 
-        desc: 'আপনার খামারের হিসাব এখন হাতের মুঠোয়।'
-    },
-    {
-        icon: '💊', 
-        color: 'bg-orange-100 text-orange-600', 
-        title: 'ওষুধের রিমাইন্ডার', 
-        desc: 'আজকের ওষুধের তালিকাটি চেক করতে ভুলবেন না।'
-    },
-    {
-        icon: '🌡️', 
-        color: 'bg-red-100 text-red-600', 
-        title: 'তাপমাত্রার সতর্কতা', 
-        desc: 'দুপুরে তাপমাত্রা বেশি হতে পারে। ফ্যান চালিয়ে রাখুন।'
-    },
-    {
-        icon: '💰', 
-        color: 'bg-teal-100 text-teal-600', 
-        title: 'আজকের বাজার দর', 
-        desc: 'ব্রয়লার পাইকারি: ১৭০ টাকা/কেজি। সোনালি: ২৩০ টাকা।'
-    },
-    {
-        icon: '💉', 
-        color: 'bg-blue-100 text-blue-600', 
-        title: 'ভ্যাকসিন রিমাইন্ডার', 
-        desc: 'আগামীকাল গামবোরো ভ্যাকসিন দেওয়ার তারিখ।'
-    },
-    {
-        icon: '📦', 
-        color: 'bg-yellow-100 text-yellow-600', 
-        title: 'স্টক অ্যালার্ট', 
-        desc: 'আপনার স্টকে খাবার প্রায় শেষ। দ্রুত অর্ডার করুন।'
-    },
-    {
-        icon: '📝', 
-        color: 'bg-pink-100 text-pink-600', 
-        title: 'হিসাব আপডেট', 
-        desc: 'গতকালকের খাবারের হিসাব এখনো যুক্ত করেননি।'
-    },
-    {
-        icon: '🏆', 
-        color: 'bg-indigo-100 text-indigo-600', 
-        title: 'অভিনন্দন!', 
-        desc: 'আপনার খামারের মৃত্যুহার এবার ২% এর নিচে। দারুণ!'
-    }
-];
-
-// ২. অ্যাপ চালু হলে এই ফাংশনটি নোটিফিকেশন লোড করবে
 document.addEventListener('DOMContentLoaded', () => {
-    renderNotifications();
+    updateNotificationsBasedOnTime();
 });
 
-// ৩. নোটিফিকেশন লিস্ট তৈরি করার ফাংশন
-function renderNotifications() {
+function updateNotificationsBasedOnTime() {
     const listContainer = document.getElementById('notif-list');
     const badge = document.getElementById('notif-badge');
     
-    // যদি HTML এ লিস্ট না থাকে, তাহলে ফিরে যাও (এরর আটকাবে)
     if (!listContainer) return;
 
-    // আগের সব ক্লিয়ার করা
+    // ১. বর্তমান সময় বের করা
+    const now = new Date();
+    const hour = now.getHours(); // ০ থেকে ২৩ পর্যন্ত
+
+    // ২. নোটিফিকেশন লিস্ট তৈরি
+    let dynamicData = [];
+
+    // --- সময় অনুযায়ী লজিক ---
+    
+    // সকাল (ভোর ৫টা থেকে সকাল ১১টা)
+    if (hour >= 5 && hour < 12) {
+        dynamicData.push({
+            icon: '☀️', color: 'bg-orange-100 text-orange-600',
+            title: 'সুপ্রভাত!', desc: 'আজকের দিনটি শুভ হোক। পানির পাত্রগুলো পরিষ্কার করেছেন কি?'
+        });
+        dynamicData.push({
+            icon: '📝', color: 'bg-blue-100 text-blue-600',
+            title: 'সকালের খাবার', desc: 'মোরগগুলোকে সকালের খাবার ও ওষুধ ঠিকমতো দিন।'
+        });
+    }
+    
+    // দুপুর (১২টা থেকে বিকাল ৪টা) - গরমের সময়
+    else if (hour >= 12 && hour < 16) {
+        dynamicData.push({
+            icon: '🔥', color: 'bg-red-100 text-red-600',
+            title: 'তাপমাত্রার সতর্কতা', desc: 'শেডের তাপমাত্রা চেক করুন। ফ্যান বা স্প্রে ব্যবহার করুন।'
+        });
+        dynamicData.push({
+            icon: '💧', color: 'bg-cyan-100 text-cyan-600',
+            title: 'স্যালাইন', desc: 'গরম বেশি থাকলে পানিতে ভিটামিন-সি বা স্যালাইন দিন।'
+        });
+    }
+    
+    // বিকাল (৪টা থেকে সন্ধ্যা ৭টা)
+    else if (hour >= 16 && hour < 19) {
+        dynamicData.push({
+            icon: '⛅', color: 'bg-green-100 text-green-600',
+            title: 'বিকালের যত্ন', desc: 'লিটার (বিছানা) শুকনো আছে কি না দেখে নিন।'
+        });
+    }
+    
+    // রাত (সন্ধ্যা ৭টার পর)
+    else {
+        dynamicData.push({
+            icon: '🌙', color: 'bg-indigo-100 text-indigo-600',
+            title: 'শুভ রাত্রি', desc: 'মশা বা পোকা মাকড় থেকে সাবধানে রাখুন। লাইট ঠিক আছে তো?'
+        });
+        dynamicData.push({
+            icon: '🔒', color: 'bg-gray-100 text-gray-600',
+            title: 'নিরাপত্তা', desc: 'ঘুমানোর আগে শেডের দরজা ও নিরাপত্তা নিশ্চিত করুন।'
+        });
+    }
+
+    // ৩. টিপস (মাঝেমধ্যে FCR টিপস দেখাবে, বাকি সব বাদ)
+    if (Math.random() > 0.7) { 
+        dynamicData.push({
+            icon: '💡', color: 'bg-purple-100 text-purple-600',
+            title: 'টিপস', desc: 'লাভ বাড়াতে খাবারের অপচয় রোধ করুন।'
+        });
+    }
+
+    // ৪. লিস্ট রেন্ডার করা (HTML এ বসানো)
     listContainer.innerHTML = '';
-
-    // লুপ চালিয়ে ডাটা থেকে লিস্ট বানানো
-    notificationData.forEach(item => {
-        const div = document.createElement('div');
-        div.className = "p-4 border-b border-gray-50 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition cursor-pointer";
-        div.innerHTML = `
-            <div class="flex items-start gap-3">
-                <div class="w-8 h-8 rounded-full ${item.color} flex items-center justify-center flex-shrink-0">
-                    ${item.icon}
+    
+    if (dynamicData.length === 0) {
+        listContainer.innerHTML = `<div class="p-8 text-center opacity-50"><p class="text-xs">কোনো নোটিফিকেশন নেই</p></div>`;
+    } else {
+        dynamicData.forEach(item => {
+            const div = document.createElement('div');
+            div.className = "p-4 border-b border-gray-50 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition cursor-pointer";
+            div.innerHTML = `
+                <div class="flex items-start gap-3">
+                    <div class="w-8 h-8 rounded-full ${item.color} flex items-center justify-center flex-shrink-0">
+                        ${item.icon}
+                    </div>
+                    <div>
+                        <p class="text-sm font-bold text-gray-800 dark:text-gray-200">${item.title}</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">${item.desc}</p>
+                    </div>
                 </div>
-                <div>
-                    <p class="text-sm font-bold text-gray-800 dark:text-gray-200">${item.title}</p>
-                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">${item.desc}</p>
-                </div>
-            </div>
-        `;
-        listContainer.appendChild(div);
-    });
+            `;
+            listContainer.appendChild(div);
+        });
+    }
 
-    // ব্যাজ আপডেট (লাল বাতিতে সংখ্যা দেখানো)
+    // ৫. ব্যাজ আপডেট
     if (badge) {
-        badge.innerText = notificationData.length;
-        badge.classList.remove('hidden');
-        // স্টাইল সেট করা
-        badge.className = "absolute top-2 right-2 w-4 h-4 bg-red-600 border border-white dark:border-gray-700 rounded-full flex items-center justify-center text-[8px] text-white font-bold animate-pulse";
+        if (dynamicData.length > 0) {
+            badge.innerText = dynamicData.length;
+            badge.classList.remove('hidden');
+            badge.className = "absolute top-2 right-2 w-4 h-4 bg-red-600 border border-white dark:border-gray-700 rounded-full flex items-center justify-center text-[8px] text-white font-bold animate-pulse";
+        } else {
+            badge.classList.add('hidden');
+        }
     }
 }
 
-// ৪. বেল আইকনে ক্লিক করলে যা হবে (Toggle)
+// বেল আইকন টগল করার ফাংশন
 function toggleNotifications() {
     const dropdown = document.getElementById('notif-dropdown');
     dropdown.classList.toggle('hidden');
 }
 
-// ৫. "মুছে ফেলুন" বাটনে ক্লিক করলে যা হবে
+// ক্লিয়ার ফাংশন
 function clearNotifications() {
     const list = document.getElementById('notif-list');
     const badge = document.getElementById('notif-badge');
-    
-    list.innerHTML = `
-        <div class="p-8 text-center flex flex-col items-center opacity-50">
-            <span class="material-symbols-outlined text-4xl mb-2">notifications_off</span>
-            <p class="text-xs">সব ক্লিয়ার! কোনো নোটিফিকেশন নেই</p>
-        </div>
-    `;
-    
-    // লাল বাতি নিভিয়ে দেওয়া
+    list.innerHTML = `<div class="p-8 text-center opacity-50"><span class="material-symbols-outlined text-4xl mb-2">notifications_off</span><p class="text-xs">সব ক্লিয়ার!</p></div>`;
     if (badge) badge.classList.add('hidden');
 }
 
-// ৬. স্ক্রিনের অন্য কোথাও ক্লিক করলে ড্রপডাউন বন্ধ হবে
+// বাইরে ক্লিক করলে বন্ধ হবে
 window.addEventListener('click', function(e) {
     const btn = e.target.closest('button');
     const dropdown = document.getElementById('notif-dropdown');
-    
     if (dropdown && !dropdown.classList.contains('hidden')) {
-        // যদি বাটনে ক্লিক না করা হয়, তবেই বন্ধ হবে
         if (!btn || !btn.onclick || !btn.onclick.toString().includes('toggleNotifications')) {
             dropdown.classList.add('hidden');
         }
