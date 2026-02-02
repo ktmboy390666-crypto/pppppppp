@@ -392,6 +392,7 @@
             document.getElementById('category-modal').classList.remove('hidden');
         }
 
+        // --- NEW FCR LOGIC ---
         function calculateFCR() {
             const toEn = n => n.replace(/[০-৯]/g, d => "০১২৩৪৫৬৭৮৯".indexOf(d));
             const b = parseFloat(toEn(document.getElementById('fcr-bags').value)) || 0;
@@ -403,8 +404,19 @@
                 document.getElementById('fcr-result').classList.remove('hidden');
                 document.getElementById('fcr-value').innerText = f.toFixed(2);
                 document.getElementById('fcr-total-feed-display').innerText = `মোট খাবার: ${totalFeed} কেজি`;
-                let msg = "স্বাভাবিক 🙂";
-                if(f < 1.5) msg = "খুব ভালো 🤩"; else if(f > 1.7) msg = "খারাপ 😟";
+                
+                // আপনার দেওয়া নতুন চার্ট অনুযায়ী
+                let msg = "";
+                if (f <= 1.49) {
+                    msg = "অসাধারণ (Excellent) 🤩";
+                } else if (f >= 1.50 && f <= 1.69) {
+                    msg = "ভালো/স্বাভাবিক (Good) 🙂";
+                } else if (f >= 1.70 && f <= 1.89) {
+                    msg = "গড়পড়তা (Average) 😐";
+                } else {
+                    msg = "মন্দ/লোকসান (Poor) 😟";
+                }
+
                 document.getElementById('fcr-status-title').innerText = msg;
             } else { alert("দয়া করে সঠিক ওজন দিন"); }
         }
