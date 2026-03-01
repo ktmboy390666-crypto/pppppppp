@@ -1,13 +1,11 @@
-/* 💊 MULTI-BIRD MEDICINE MANAGER (Button Color Bug Fixed) */
+/* 💊 MULTI-BIRD MEDICINE MANAGER (Search Feature Added) */
 
 let allMedicinesData = [];
 let currentBirdType = 'broiler'; 
 
-// ১. জাতের নাম ঠিক করার ফাংশন (যাতে বানান বা ছোট/বড় হাতের অক্ষরের জন্য ভুল না হয়)
+// ১. জাতের নাম ঠিক করার ফাংশন
 function normalizeBirdType(type) {
     if (!type) return 'broiler';
-    
-    // সব নামকে ছোট হাতের করে নিচ্ছি যাতে মেলাতে সুবিধা হয়
     type = String(type).trim().toLowerCase(); 
     
     if (type.includes('ব্রয়লার') || type.includes('বয়লার') || type.includes('broiler')) return 'broiler';
@@ -40,19 +38,21 @@ function initMedicines() {
     }
 }
 
-// ৩. বাটনে ক্লিক করলে জাত পরিবর্তন ও কালার চেঞ্জ করা
+// ৩. বাটনে ক্লিক করলে জাত পরিবর্তন
 function setBirdFilter(rawType) {
     currentBirdType = normalizeBirdType(rawType);
 
-    // বাটনের কালার ও স্টাইল আপডেট (এখন একদম পারফেক্ট কাজ করবে)
+    // 💡 ম্যাজিক: ট্যাব বদলালে সার্চ বক্স অটোমেটিক খালি হয়ে যাবে!
+    const searchInput = document.getElementById('medicineSearch');
+    if(searchInput) searchInput.value = '';
+
+    // বাটনের কালার ও স্টাইল আপডেট
     document.querySelectorAll('.bird-filter-btn').forEach(btn => {
         const btnType = normalizeBirdType(btn.dataset.type);
         
         if(btnType === currentBirdType) {
-            // যদি সিলেক্ট করা থাকে (সবুজ রঙ)
             btn.className = "bird-filter-btn px-4 py-2 rounded-full bg-teal-700 text-white text-xs font-bold whitespace-nowrap shadow-md transition transform scale-105";
         } else {
-            // যদি সিলেক্ট করা না থাকে (সাদা রঙ)
             btn.className = "bird-filter-btn px-4 py-2 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 text-xs font-bold whitespace-nowrap transition";
         }
     });
@@ -60,20 +60,40 @@ function setBirdFilter(rawType) {
     renderFilteredMedicines();
 }
 
-// ৪. লিস্ট স্ক্রিনে দেখানো
+// ৪. লিস্ট স্ক্রিনে দেখানো (সার্চ ফিল্টার সহ)
 function renderFilteredMedicines() {
     const container = document.getElementById('medicineListContainer');
+    const searchInput = document.getElementById('medicineSearch');
+    
+    // সার্চ বক্সে কিছু লিখলে সেটা ছোট হাতের অক্ষরে ধরে নিবে (যাতে বড়/ছোট হাতের জন্য ঝামেলা না হয়)
+    const searchTerm = searchInput ? searchInput.value.trim().toLowerCase() : '';
+    
     if(!container) return;
-
     container.innerHTML = '';
 
-    const filtered = allMedicinesData.filter(m => m.internalBirdType === currentBirdType);
+    // প্রথম ফিল্টার: কোন ট্যাবে আছি (যেমন: ব্রয়লার)
+    let filtered = allMedicinesData.filter(m => m.internalBirdType === currentBirdType);
 
+    // দ্বিতীয় ফিল্টার: সার্চ বক্সে কিছু লেখা থাকলে সেটা খুঁজবে
+    if (searchTerm !== '') {
+        filtered = filtered.filter(item => {
+            // ওষুধের নাম, দিন, সময় বা নোটে সার্চের লেখাটা আছে কিনা চেক করবে
+            const searchString = `${item.medicine} ${item.day} ${item.time} ${item.note || ''}`.toLowerCase();
+            return searchString.includes(searchTerm);
+        });
+    }
+
+    // যদি কিছু না পাওয়া যায়
     if (filtered.length === 0) {
-        container.innerHTML = `<div class="text-center py-20 opacity-50"><span class="material-symbols-outlined text-6xl mb-2">inventory_2</span><p>এই জাতের জন্য কোনো ওষুধ যোগ করা হয়নি</p></div>`;
+        if (searchTerm !== '') {
+            container.innerHTML = `<div class="text-center py-16 opacity-50"><span class="material-symbols-outlined text-5xl mb-2 text-teal-600">search_off</span><p>কোনো ফলাফল পাওয়া যায়নি!</p></div>`;
+        } else {
+            container.innerHTML = `<div class="text-center py-20 opacity-50"><span class="material-symbols-outlined text-6xl mb-2">inventory_2</span><p>এই জাতের জন্য কোনো ওষুধ যোগ করা হয়নি</p></div>`;
+        }
         return;
     }
 
+    // দিন অনুযায়ী গ্রুপ করা
     const grouped = {};
     filtered.forEach(item => {
         const days = String(item.day).split("→").map(d => d.trim());
