@@ -7,6 +7,9 @@ let currentBirdType = 'ব্রয়লার'; // ডিফল্টভাব
 
 // ১. ডাটাবেস থেকে ওষুধ লোড করা
 function initMedicines() {
+    const container = document.getElementById('medicineListContainer');
+    if(container) container.innerHTML = `<div class="text-center py-10 opacity-50">লোড হচ্ছে...</div>`;
+
     if (typeof medDb !== 'undefined') {
         medDb.ref('admin_medicines').on('value', snapshot => {
             const data = snapshot.val();
@@ -16,6 +19,10 @@ function initMedicines() {
                 Object.values(data).forEach(item => {
                     // যদি পুরানো ডাটা থাকে যাতে জাত লেখা নেই, সেগুলোকে অটোমেটিক ব্রয়লার ধরবে
                     item.birdType = item.birdType || 'ব্রয়লার';
+                    
+                    // দিন (Day) যদি ভুল করে Number হিসেবে সেভ হয়, সেটাকে String করে নেওয়া
+                    item.day = String(item.day || "1"); 
+                    
                     allMedicinesData.push(item);
                 });
             }
@@ -42,7 +49,7 @@ function setBirdFilter(type) {
     renderFilteredMedicines();
 }
 
-// ৩. লিস্ট রেন্ডার করা (আগের মতোই সুন্দর স্টাইলে)
+// ৩. লিস্ট রেন্ডার করা
 function renderFilteredMedicines() {
     const container = document.getElementById('medicineListContainer');
     if(!container) return;
@@ -60,7 +67,8 @@ function renderFilteredMedicines() {
     // দিন অনুযায়ী গ্রুপ করা
     const grouped = {};
     filtered.forEach(item => {
-        const days = item.day.split("→").map(d => d.trim());
+        // String(item.day) ব্যবহার করা হয়েছে যাতে error না আসে
+        const days = String(item.day).split("→").map(d => d.trim());
         days.forEach(d => {
             if(!grouped[d]) grouped[d] = [];
             grouped[d].push(item);
@@ -97,7 +105,5 @@ function renderFilteredMedicines() {
     });
 }
 
-// পেজ লোড হলে ফাংশন চালু হবে
-document.addEventListener('DOMContentLoaded', () => {
-    setTimeout(initMedicines, 1000); 
-});
+// অ্যাপ চালু হওয়ার সাথে সাথেই ডাটা লোড করবে
+setTimeout(initMedicines, 500); 
