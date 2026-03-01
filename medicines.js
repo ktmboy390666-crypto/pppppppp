@@ -1,21 +1,21 @@
-/* 💊 MULTI-BIRD MEDICINE MANAGER (Bugs Fixed)
-   বাংলা ফন্ট ও বানানের সমস্যার জন্য নতুন লজিক।
-*/
+/* 💊 MULTI-BIRD MEDICINE MANAGER (Button Color Bug Fixed) */
 
 let allMedicinesData = [];
-let currentBirdType = 'broiler'; // এখন থেকে ইন্টারনাল ইংলিশ নাম ব্যবহার হবে
+let currentBirdType = 'broiler'; 
 
-// ১. জাতের নাম ঠিক করার ফাংশন (যাতে বানান ভুলের জন্য ডাটা না হারায়)
+// ১. জাতের নাম ঠিক করার ফাংশন (যাতে বানান বা ছোট/বড় হাতের অক্ষরের জন্য ভুল না হয়)
 function normalizeBirdType(type) {
     if (!type) return 'broiler';
-    type = String(type).trim();
     
-    if (type.includes('ব্রয়লার') || type.includes('বয়লার') || type.includes('Broiler')) return 'broiler';
-    if (type.includes('কালার') || type.includes('Color')) return 'color_bird';
-    if (type.includes('সোনালি') || type.includes('সোনালী') || type.includes('Sonali')) return 'sonali';
-    if (type.includes('দেশি') || type.includes('দেশী') || type.includes('Deshi')) return 'deshi';
+    // সব নামকে ছোট হাতের করে নিচ্ছি যাতে মেলাতে সুবিধা হয়
+    type = String(type).trim().toLowerCase(); 
     
-    return 'broiler'; // ডিফল্ট
+    if (type.includes('ব্রয়লার') || type.includes('বয়লার') || type.includes('broiler')) return 'broiler';
+    if (type.includes('কালার') || type.includes('color')) return 'color_bird';
+    if (type.includes('সোনালি') || type.includes('সোনালী') || type.includes('sonali')) return 'sonali';
+    if (type.includes('দেশি') || type.includes('দেশী') || type.includes('deshi')) return 'deshi';
+    
+    return 'broiler'; 
 }
 
 // ২. ডাটাবেস থেকে ডাটা আনা
@@ -30,10 +30,8 @@ function initMedicines() {
             
             if (data) {
                 Object.values(data).forEach(item => {
-                    // ফায়ারবেসের ডাটাকে সেফ ইংলিশ নামে কনভার্ট করে রাখছি
                     item.internalBirdType = normalizeBirdType(item.birdType);
                     item.day = String(item.day || "1"); 
-                    
                     allMedicinesData.push(item);
                 });
             }
@@ -42,21 +40,20 @@ function initMedicines() {
     }
 }
 
-// ৩. বাটনে ক্লিক করলে জাত পরিবর্তন
+// ৩. বাটনে ক্লিক করলে জাত পরিবর্তন ও কালার চেঞ্জ করা
 function setBirdFilter(rawType) {
-    // বাটন থেকে আসা বাংলা নামটাকে সেফ ইংলিশ নামে কনভার্ট করা
     currentBirdType = normalizeBirdType(rawType);
 
-    // বাটনের কালার ও স্টাইল আপডেট
+    // বাটনের কালার ও স্টাইল আপডেট (এখন একদম পারফেক্ট কাজ করবে)
     document.querySelectorAll('.bird-filter-btn').forEach(btn => {
-        const btnInternalType = normalizeBirdType(btn.dataset.type);
+        const btnType = normalizeBirdType(btn.dataset.type);
         
-        if(btnInternalType === currentBirdType) {
-            btn.classList.add('bg-teal-700', 'text-white', 'shadow-md');
-            btn.classList.remove('bg-white', 'text-gray-600', 'dark:bg-gray-800', 'dark:text-gray-300');
+        if(btnType === currentBirdType) {
+            // যদি সিলেক্ট করা থাকে (সবুজ রঙ)
+            btn.className = "bird-filter-btn px-4 py-2 rounded-full bg-teal-700 text-white text-xs font-bold whitespace-nowrap shadow-md transition transform scale-105";
         } else {
-            btn.classList.remove('bg-teal-700', 'text-white', 'shadow-md');
-            btn.classList.add('bg-white', 'text-gray-600', 'dark:bg-gray-800', 'dark:text-gray-300');
+            // যদি সিলেক্ট করা না থাকে (সাদা রঙ)
+            btn.className = "bird-filter-btn px-4 py-2 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 text-xs font-bold whitespace-nowrap transition";
         }
     });
 
@@ -70,7 +67,6 @@ function renderFilteredMedicines() {
 
     container.innerHTML = '';
 
-    // সিলেক্ট করা জাত অনুযায়ী ফিল্টার
     const filtered = allMedicinesData.filter(m => m.internalBirdType === currentBirdType);
 
     if (filtered.length === 0) {
@@ -78,7 +74,6 @@ function renderFilteredMedicines() {
         return;
     }
 
-    // দিন অনুযায়ী গ্রুপ করা
     const grouped = {};
     filtered.forEach(item => {
         const days = String(item.day).split("→").map(d => d.trim());
