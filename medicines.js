@@ -1,11 +1,24 @@
-/* 💊 MULTI-BIRD MEDICINE MANAGER
-   ব্রয়লার, কালার বার্ড, সোনালি এবং দেশি মুরগির ওষুধ ফিল্টার করার লজিক।
+/* 💊 MULTI-BIRD MEDICINE MANAGER (Bugs Fixed)
+   বাংলা ফন্ট ও বানানের সমস্যার জন্য নতুন লজিক।
 */
 
 let allMedicinesData = [];
-let currentBirdType = 'ব্রয়লার'; // ডিফল্টভাবে ব্রয়লার সিলেক্ট থাকবে
+let currentBirdType = 'broiler'; // এখন থেকে ইন্টারনাল ইংলিশ নাম ব্যবহার হবে
 
-// ১. ডাটাবেস থেকে ওষুধ লোড করা
+// ১. জাতের নাম ঠিক করার ফাংশন (যাতে বানান ভুলের জন্য ডাটা না হারায়)
+function normalizeBirdType(type) {
+    if (!type) return 'broiler';
+    type = String(type).trim();
+    
+    if (type.includes('ব্রয়লার') || type.includes('বয়লার') || type.includes('Broiler')) return 'broiler';
+    if (type.includes('কালার') || type.includes('Color')) return 'color_bird';
+    if (type.includes('সোনালি') || type.includes('সোনালী') || type.includes('Sonali')) return 'sonali';
+    if (type.includes('দেশি') || type.includes('দেশী') || type.includes('Deshi')) return 'deshi';
+    
+    return 'broiler'; // ডিফল্ট
+}
+
+// ২. ডাটাবেস থেকে ডাটা আনা
 function initMedicines() {
     const container = document.getElementById('medicineListContainer');
     if(container) container.innerHTML = `<div class="text-center py-10 opacity-50">লোড হচ্ছে...</div>`;
@@ -17,10 +30,8 @@ function initMedicines() {
             
             if (data) {
                 Object.values(data).forEach(item => {
-                    // যদি পুরানো ডাটা থাকে যাতে জাত লেখা নেই, সেগুলোকে অটোমেটিক ব্রয়লার ধরবে
-                    item.birdType = item.birdType || 'ব্রয়লার';
-                    
-                    // দিন (Day) যদি ভুল করে Number হিসেবে সেভ হয়, সেটাকে String করে নেওয়া
+                    // ফায়ারবেসের ডাটাকে সেফ ইংলিশ নামে কনভার্ট করে রাখছি
+                    item.internalBirdType = normalizeBirdType(item.birdType);
                     item.day = String(item.day || "1"); 
                     
                     allMedicinesData.push(item);
@@ -31,13 +42,16 @@ function initMedicines() {
     }
 }
 
-// ২. ফিল্টার বাটনে ক্লিক করলে জাত পরিবর্তন করা
-function setBirdFilter(type) {
-    currentBirdType = type;
+// ৩. বাটনে ক্লিক করলে জাত পরিবর্তন
+function setBirdFilter(rawType) {
+    // বাটন থেকে আসা বাংলা নামটাকে সেফ ইংলিশ নামে কনভার্ট করা
+    currentBirdType = normalizeBirdType(rawType);
 
-    // বাটনের ডিজাইন (কালার) চেঞ্জ করা
+    // বাটনের কালার ও স্টাইল আপডেট
     document.querySelectorAll('.bird-filter-btn').forEach(btn => {
-        if(btn.dataset.type === type) {
+        const btnInternalType = normalizeBirdType(btn.dataset.type);
+        
+        if(btnInternalType === currentBirdType) {
             btn.classList.add('bg-teal-700', 'text-white', 'shadow-md');
             btn.classList.remove('bg-white', 'text-gray-600', 'dark:bg-gray-800', 'dark:text-gray-300');
         } else {
@@ -49,15 +63,15 @@ function setBirdFilter(type) {
     renderFilteredMedicines();
 }
 
-// ৩. লিস্ট রেন্ডার করা
+// ৪. লিস্ট স্ক্রিনে দেখানো
 function renderFilteredMedicines() {
     const container = document.getElementById('medicineListContainer');
     if(!container) return;
 
     container.innerHTML = '';
 
-    // বর্তমান সিলেক্ট করা জাত অনুযায়ী ফিল্টার
-    const filtered = allMedicinesData.filter(m => m.birdType === currentBirdType);
+    // সিলেক্ট করা জাত অনুযায়ী ফিল্টার
+    const filtered = allMedicinesData.filter(m => m.internalBirdType === currentBirdType);
 
     if (filtered.length === 0) {
         container.innerHTML = `<div class="text-center py-20 opacity-50"><span class="material-symbols-outlined text-6xl mb-2">inventory_2</span><p>এই জাতের জন্য কোনো ওষুধ যোগ করা হয়নি</p></div>`;
@@ -67,7 +81,6 @@ function renderFilteredMedicines() {
     // দিন অনুযায়ী গ্রুপ করা
     const grouped = {};
     filtered.forEach(item => {
-        // String(item.day) ব্যবহার করা হয়েছে যাতে error না আসে
         const days = String(item.day).split("→").map(d => d.trim());
         days.forEach(d => {
             if(!grouped[d]) grouped[d] = [];
