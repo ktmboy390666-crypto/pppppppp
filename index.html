@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <title>আমার খামার - স্মার্ট ম্যানেজার</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" href="icon.png">
+    <link rel="apple-touch-icon" href="icon.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js'); });
+        }
+    </script>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+    <style>
+        :root { --color-primary: #00796B; }
+        body { font-family: 'Noto Sans Bengali', sans-serif; -webkit-font-smoothing: antialiased; }
+        body, .page, .bg-white, .bg-gray-50, .text-gray-900, .text-gray-500 { transition: background-color 0.3s, color 0.3s, border-color 0.3s; }
+        .page { position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow-y: auto; display: none; }
+        .page-visible { display: block; animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .scrolling-text { overflow: hidden; white-space: nowrap; background: #E0F2F1; padding: 8px 12px; border-radius: 8px; margin-bottom: 16px; border-left: 4px solid var(--color-primary); }
+        .dark .scrolling-text { background: #004D40; border-left-color: #4DB6AC; color: #E0F2F1; }
+        .scrolling-text span { display: inline-block; padding-left: 100%; animation: scroll-left 15s linear infinite; color: var(--color-primary); font-weight: 600; }
+        .dark .scrolling-text span { color: #80CBC4; }
+        @keyframes scroll-left { 0% { transform: translateX(0%); } 100% { transform: translateX(-100%); } }
+        #pdf-overlay { display: none; }
+        .pdf-table th, .pdf-table td { border: 1px solid #ccc; padding: 8px; font-size: 13px; text-align: left; color: black; }
+        .pdf-table th { background-color: #eee; font-weight: bold; }
+        details > summary { list-style: none; cursor: pointer; transition: 0.2s; }
+        details > summary::-webkit-details-marker { display: none; }
+        details[open] > summary { background-color: #E0F2F1; color: #00796B; }
+        .dark details[open] > summary { background-color: #004D40; color: #80CBC4; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+    <script>
+        tailwind.config = { darkMode: 'class', theme: { extend: { colors: { primary: '#00796B' } } } }
+        if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) document.documentElement.classList.add('dark'); else document.documentElement.classList.remove('dark');
+    </script>
+</head>
+<body class="bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100">
+
+    <div id="auth-page" class="fixed inset-0 z-50 bg-gray-50 dark:bg-gray-900 flex flex-col justify-center items-center p-6">
+        <div class="w-full max-w-sm bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700">
+            <div class="text-center mb-6">
+                <div class="w-20 h-20 bg-teal-50 dark:bg-teal-900/30 rounded-full flex items-center justify-center mx-auto mb-4 text-4xl shadow-sm">🐔</div>
+                <h1 class="text-3xl font-bold text-teal-700 dark:text-teal-400">আমার হিসাব</h1>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">স্মার্ট পোল্ট্রি খামার ম্যানেজমেন্ট</p>
+            </div>
+            <button onclick="handleGoogleLogin()" class="w-full p-3 mb-6 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl flex items-center justify-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-600 transition shadow-sm"><img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="w-5 h-5"><span class="font-bold text-gray-700 dark:text-white">Google দিয়ে লগইন করুন</span></button>
+            <div class="flex items-center gap-2 mb-6"><div class="h-[1px] bg-gray-200 dark:bg-gray-600 flex-grow"></div><span class="text-xs text-gray-400 font-medium">অথবা ইমেইল দিয়ে</span><div class="h-[1px] bg-gray-200 dark:bg-gray-600 flex-grow"></div></div>
+            <div id="login-form-container">
+                <input type="email" id="login-email" placeholder="ইমেইল" class="w-full p-4 mb-4 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-teal-500 dark:text-white">
+                <input type="password" id="login-pass" placeholder="পাসওয়ার্ড" class="w-full p-4 mb-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-teal-500 dark:text-white">
+                <div class="text-right mb-6"><button onclick="handleForgotPassword()" class="text-xs text-teal-600 dark:text-teal-400 font-bold hover:underline">পাসওয়ার্ড ভুলে গেছেন?</button></div>
+                <button onclick="handleLogin()" class="w-full p-4 bg-teal-700 hover:bg-teal-800 text-white font-bold rounded-xl shadow-lg transition transform active:scale-95">লগইন করুন</button>
+                <p class="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">একাউন্ট নেই? <button onclick="toggleAuthMode()" class="text-teal-700 dark:text-teal-400 font-bold hover:underline">রেজিস্ট্রেশন</button></p>
+            </div>
+            <div id="register-form-container" class="hidden">
+                <input type="email" id="reg-email" placeholder="ইমেইল" class="w-full p-4 mb-4 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 dark:text-white">
+                <input type="password" id="reg-pass" placeholder="পাসওয়ার্ড" class="w-full p-4 mb-6 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 dark:text-white">
+                <button onclick="handleRegister()" class="w-full p-4 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl shadow-lg transition transform active:scale-95">রেজিস্ট্রেশন করুন</button>
+                <p class="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">একাউন্ট আছে? <button onclick="toggleAuthMode()" class="text-teal-700 dark:text-teal-400 font-bold hover:underline">লগইন</button></p>
+            </div>
+            <p id="auth-error" class="text-red-500 text-sm text-center mt-4 font-medium"></p>
+        </div>
+    </div>
+
+    <main id="main-app" class="relative max-w-md mx-auto h-screen overflow-hidden hidden shadow-2xl bg-gray-50 dark:bg-gray-900">
+        
+        <div id="dashboard" class="page tab-page page-visible bg-gray-50 dark:bg-gray-900">
+            <header class="sticky top-0 z-10 p-5 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
+                <div><h1 class="text-2xl font-bold text-teal-700 dark:text-teal-400">ড্যাশবোর্ড</h1><p class="text-xs text-gray-500 dark:text-gray-400" id="current-date">আজকের তারিখ</p></div>
+                <div class="relative"><button onclick="toggleNotifications()" class="relative w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-teal-700 dark:text-teal-400 hover:bg-teal-50 dark:hover:bg-gray-600 transition focus:outline-none"><span class="text-xl">🔔</span><span id="notif-badge" class="hidden absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 border-2 border-white dark:border-gray-700 rounded-full animate-pulse"></span></button><div id="notif-dropdown" class="hidden absolute right-0 mt-3 w-72 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-700 z-50 overflow-hidden origin-top-right transform transition-all"><div class="p-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-700/50"><h3 class="font-bold text-gray-700 dark:text-gray-200 text-sm">নোটিফিকেশন</h3><button onclick="clearNotifications()" class="text-xs text-teal-600 dark:text-teal-400 font-bold hover:underline">মুছে ফেলুন</button></div><div id="notif-list" class="max-h-64 overflow-y-auto"></div></div></div>
+            </header>
+            <div class="p-5 space-y-6 pb-28">
+                <div id="dashboard-summary" class="transform transition hover:scale-[1.02]"></div>
+                <div><div class="flex justify-between items-center mb-4"><h2 class="text-lg font-bold text-gray-800 dark:text-gray-200">সাম্প্রতিক চালান</h2><button onclick="navigateToTab('shipments-page')" class="text-xs text-teal-600 dark:text-teal-400 font-bold">সব দেখুন</button></div><div id="ongoing-shipments-list" class="space-y-3"></div></div>
+            </div>
+        </div>
+        
+        <div id="shipments-page" class="page tab-page bg-gray-50 dark:bg-gray-900">
+            <header class="sticky top-0 z-10 p-5 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md border-b border-gray-100 dark:border-gray-700"><h1 class="text-xl font-bold text-center dark:text-white">সকল চালান</h1></header>
+            <div class="p-5 space-y-3 pb-28" id="all-shipments-list"></div>
+        </div>
+        
+        <div id="medicines-page" class="page tab-page bg-gray-50 dark:bg-gray-900">
+            <header class="sticky top-0 z-40 bg-white/80 dark:bg-gray-800/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 p-4 flex items-center justify-between">
+                <div class="relative">
+                    <button onclick="toggleMenu('dropdownMenu')" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition"><span class="material-symbols-outlined dark:text-white">menu</span></button>
+                    <div id="dropdownMenu" class="hidden absolute left-0 mt-2 w-48 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-xl shadow-2xl z-50 overflow-hidden">
+                        <button onclick="document.getElementById('profileCard').classList.remove('hidden'); this.parentElement.classList.add('hidden');" class="w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-gray-200 transition border-b dark:border-gray-700"><span class="material-symbols-outlined text-primary">person</span> প্রোফাইল</button>
+                        <button onclick="location.reload()" class="w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-gray-200 transition"><span class="material-symbols-outlined text-blue-500">refresh</span> রিফ্রেশ</button>
+                    </div>
+                </div>
+                <h1 class="text-lg font-bold text-teal-700 dark:text-teal-400">ওষুধের তালিকা</h1><div class="w-10"></div> 
+            </header>
+
+            <div id="profileCard" class="fixed inset-0 flex items-center justify-center bg-black/60 hidden z-[60] backdrop-blur-sm" onclick="this.classList.add('hidden')">
+                <div class="bg-white dark:bg-gray-800 rounded-3xl p-8 w-80 relative shadow-2xl transform transition-all" onclick="event.stopPropagation()">
+                    <button onclick="document.getElementById('profileCard').classList.add('hidden')" class="absolute top-4 right-4 text-gray-400 hover:text-red-500 transition"><span class="material-symbols-outlined">close</span></button>
+                    <div class="flex flex-col items-center text-center"><img src="https://i.ibb.co/NdSxJghH/1759806262489.png" alt="Profile" class="rounded-full w-24 h-24 mb-4 border-4 border-teal-100 p-1"><h2 class="text-xl font-bold mb-1 dark:text-white">MD SHUVO P.K</h2><div class="bg-gray-50 dark:bg-gray-700 p-4 rounded-2xl mt-2"><p class="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">এই অ্যাপটি তৈরি করেছে শুভ প্রামানিক!</p></div></div>
+                </div>
+            </div>
+
+            <div class="max-w-xl mx-auto p-5 pb-28">
+                <div class="scrolling-text"><span id="scrollText">লোড হচ্ছে...</span></div>
+                
+                <div class="flex gap-2 overflow-x-auto pb-4 mb-2 no-scrollbar">
+                    <button onclick="setBirdFilter('ব্রয়লার')" data-type="broiler" class="bird-filter-btn px-4 py-2 rounded-full bg-teal-700 text-white text-xs font-bold whitespace-nowrap shadow-md transition transform scale-105">ব্রয়লার</button>
+                    <button onclick="setBirdFilter('কালার বার্ড')" data-type="color_bird" class="bird-filter-btn px-4 py-2 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 text-xs font-bold whitespace-nowrap transition">কালার বার্ড</button>
+                    <button onclick="setBirdFilter('সোনালি')" data-type="sonali" class="bird-filter-btn px-4 py-2 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 text-xs font-bold whitespace-nowrap transition">সোনালি</button>
+                    <button onclick="setBirdFilter('দেশি')" data-type="deshi" class="bird-filter-btn px-4 py-2 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 text-xs font-bold whitespace-nowrap transition">দেশি</button>
+                </div>
+
+                <div class="relative mb-6">
+                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none"><span class="material-symbols-outlined text-teal-600 dark:text-teal-400">search</span></div>
+                    <input type="text" id="medicineSearch" onkeyup="renderFilteredMedicines()" placeholder="ওষুধের নাম, দিন বা সময় দিয়ে খুঁজুন..." class="w-full pl-12 pr-4 py-3.5 rounded-2xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-teal-500 shadow-sm bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-white transition font-medium text-sm">
+                </div>
+
+                <div id="medicineListContainer" class="space-y-6 medicine-container"></div>
+            </div>
+
+            <div class="fixed bottom-24 right-6 z-40"><button onclick="openVideoModal()" class="w-16 h-16 rounded-2xl bg-red-600 text-white shadow-lg flex items-center justify-center animate-bounce"><span class="material-symbols-outlined text-4xl">play_circle</span></button></div>
+        </div>
+
+        <div id="settings-page" class="page tab-page bg-gray-50 dark:bg-gray-900">
+            <header class="sticky top-0 z-10 p-5 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md border-b border-gray-100 dark:border-gray-700"><h1 class="text-xl font-bold text-center dark:text-white">সেটিংস</h1></header>
+            <div class="p-5 space-y-6 pb-28">
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden"><h2 class="px-5 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-700/50">সাধারণ</h2><div class="flex justify-between items-center p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition"><span class="flex items-center gap-3 font-medium dark:text-gray-200"><span class="material-symbols-outlined text-gray-500">dark_mode</span> ডার্ক মোড</span><button onclick="toggleTheme()" class="w-12 h-6 rounded-full bg-gray-300 dark:bg-teal-600 relative transition-colors focus:outline-none"><div id="theme-knob" class="w-4 h-4 bg-white rounded-full absolute top-1 left-1 transition-all dark:left-7 shadow-sm"></div></button></div></div>
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden"><h2 class="px-5 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-700/50">টুলস</h2><button onclick="navigate('due-list-page')" class="w-full flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition border-b border-gray-100 dark:border-gray-700"><span class="flex items-center gap-3 font-medium dark:text-gray-200"><span class="material-symbols-outlined text-orange-500">account_balance_wallet</span> বাকির খাতা</span> <span class="material-symbols-outlined text-gray-400">chevron_right</span></button><button onclick="navigate('fcr-calculator-page')" class="w-full flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition border-b border-gray-100 dark:border-gray-700"><span class="flex items-center gap-3 font-medium dark:text-gray-200"><span class="material-symbols-outlined text-purple-500">calculate</span> FCR ক্যালকুলেটর</span> <span class="material-symbols-outlined text-gray-400">chevron_right</span></button><button onclick="openStockPage()" class="w-full flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition border-b border-gray-100 dark:border-gray-700"><span class="flex items-center gap-3 font-medium dark:text-gray-200"><span class="material-symbols-outlined text-green-600">inventory</span> আমার স্টক</span> <span class="material-symbols-outlined text-gray-400">chevron_right</span></button><button onclick="openDailyReportPage()" class="w-full flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition"><span class="flex items-center gap-3 font-medium dark:text-gray-200"><span class="material-symbols-outlined text-red-500">monitoring</span> দৈনিক রিপোর্ট (মৃত্যু ও গ্রোথ)</span> <span class="material-symbols-outlined text-gray-400">chevron_right</span></button></div>
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden"><h2 class="px-5 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-700/50">একাউন্ট</h2><button onclick="logoutUser()" class="w-full flex items-center justify-center gap-2 p-4 text-red-500 font-bold hover:bg-red-50 dark:hover:bg-red-900/20 transition"><span class="material-symbols-outlined">logout</span> লগআউট করুন</button></div>
+                <div class="text-center"><p class="text-xs text-gray-300 mt-1 font-mono">Dev MD SHUVO P.K</p></div>
+            </div>
+        </div>
+
+        <div id="shipment-details-page" class="page bg-gray-50 dark:bg-gray-900">
+            <header class="sticky top-0 z-10 p-4 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md border-b border-gray-100 dark:border-gray-700 flex justify-between items-center shadow-sm">
+                <div class="flex items-center"><button onclick="goBack()" class="mr-2 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"><span class="material-symbols-outlined dark:text-white">arrow_back</span></button><h1 id="details-shipment-name" class="text-lg font-bold truncate w-24 dark:text-white"></h1></div>
+                <div class="flex gap-1"><button onclick="openCategoryReport()" class="p-2 rounded-full text-purple-600 bg-purple-50 hover:bg-purple-100 dark:bg-purple-900/30 dark:text-purple-300"><span class="material-symbols-outlined">pie_chart</span></button><button onclick="sharePDF()" class="p-2 rounded-full text-teal-700 bg-teal-50 hover:bg-teal-100 dark:bg-teal-900/30 dark:text-teal-300"><span class="material-symbols-outlined">share</span></button><button onclick="deleteCurrentShipment()" class="p-2 rounded-full text-red-500 bg-red-50 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-300"><span class="material-symbols-outlined">delete</span></button></div>
+            </header>
+            <div class="p-5 space-y-5 pb-28">
+                <div id="details-summary-cards" class="grid grid-cols-2 gap-4"></div>
+                <div class="bg-gray-200 dark:bg-gray-700 p-1 rounded-xl flex shadow-inner"><button id="expense-tab-button" onclick="switchTab('expense')" class="flex-1 py-2 rounded-lg text-sm font-bold transition-all shadow-sm bg-white dark:bg-gray-600 text-gray-800 dark:text-white">ব্যয়</button><button id="income-tab-button" onclick="switchTab('income')" class="flex-1 py-2 rounded-lg text-sm font-bold transition-all text-gray-500 dark:text-gray-400">আয়</button></div>
+                <div id="expense-list-container" class="space-y-3"></div><div id="income-list-container" class="hidden space-y-3"></div>
+            </div>
+            <div class="fixed bottom-24 right-6 z-20"><button onclick="prepareEntryForm()" class="w-14 h-14 rounded-full bg-teal-700 text-white shadow-xl flex items-center justify-center transform transition hover:scale-110 active:scale-95"><span class="material-symbols-outlined text-3xl">add</span></button></div>
+        </div>
+
+        <div id="category-modal" class="hidden fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm">
+            <div class="bg-white dark:bg-gray-800 w-full sm:w-96 rounded-t-3xl sm:rounded-3xl p-6 relative animate-[slideUp_0.3s_ease-out]">
+                <button onclick="document.getElementById('category-modal').classList.add('hidden')" class="absolute top-4 right-4 p-2 bg-gray-100 dark:bg-gray-700 rounded-full hover:bg-red-100 hover:text-red-500 transition"><span class="material-symbols-outlined dark:text-gray-300">close</span></button>
+                <h2 class="text-xl font-bold text-gray-800 dark:text-white mb-1">খরচের খাতসমূহ</h2>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">কোন খাতে কত খরচ হয়েছে</p>
+                <div id="category-report-content" class="space-y-3 max-h-[60vh] overflow-y-auto"></div>
+            </div>
+        </div>
+
+        <div id="add-shipment-page" class="page bg-white dark:bg-gray-900"><header class="p-4 border-b dark:border-gray-800 flex items-center"><button onclick="goBack()" class="mr-4"><span class="material-symbols-outlined dark:text-white">arrow_back</span></button><h1 class="text-xl font-bold dark:text-white">নতুন চালান</h1></header><div class="p-6"><form onsubmit="saveShipment(event)" class="space-y-5"><input id="shipment-name" required placeholder="চালানের নাম" class="w-full p-4 rounded-xl border bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:text-white"><input id="shipment-chicken-count" type="number" required placeholder="মুরগির সংখ্যা" class="w-full p-4 rounded-xl border bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:text-white"><input id="shipment-start-date" type="date" required class="w-full p-4 rounded-xl border bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:text-white"><button type="submit" class="w-full p-4 bg-teal-700 text-white font-bold rounded-xl shadow-lg">সেভ করুন</button></form></div></div>
+        <div id="add-entry-page" class="page bg-white dark:bg-gray-900"><header class="p-4 border-b dark:border-gray-800 flex items-center"><button onclick="goBack()" class="mr-4"><span class="material-symbols-outlined dark:text-white">arrow_back</span></button><h1 id="entry-form-title" class="text-xl font-bold dark:text-white"></h1></header><div class="p-6"><form onsubmit="saveEntry(event)" class="space-y-5"><div id="expense-fields"><select id="expense-type" class="w-full p-4 rounded-xl border bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:text-white"><option>মুরগির বাচ্চা কেনা</option><option>খাবার খরচ</option><option>ঔষধ ও ভিটামিন</option><option>ইলেকট্রিক</option><option>গুড়া</option><option>অন্যান্য</option></select></div><div id="income-fields" class="hidden"><input id="income-description" placeholder="বিবরণ" class="w-full p-4 rounded-xl border bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:text-white"></div><input id="entry-amount" type="number" required placeholder="টাকা" class="w-full p-4 rounded-xl border bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:text-white"><input id="entry-date" type="date" required class="w-full p-4 rounded-xl border bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:text-white"><textarea id="entry-note" placeholder="নোট (অপশনাল)" class="w-full p-4 rounded-xl border bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:text-white"></textarea><button type="submit" class="w-full p-4 bg-teal-700 text-white font-bold rounded-xl shadow-lg">সেভ করুন</button></form></div></div>
+        <div id="fcr-calculator-page" class="page bg-white dark:bg-gray-900"><header class="p-4 border-b dark:border-gray-800 flex items-center"><button onclick="goBack()" class="mr-4"><span class="material-symbols-outlined dark:text-white">arrow_back</span></button><h1 class="text-xl font-bold dark:text-white">FCR ক্যালকুলেটর</h1></header><div class="p-6 space-y-5"><input id="fcr-bags" type="text" inputmode="numeric" placeholder="খাবারের বস্তা (৫০ কেজি)" class="w-full p-4 rounded-xl border bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:text-white"><input id="fcr-extra-feed" type="text" inputmode="numeric" placeholder="অতিরিক্ত খাবার (কেজি)" class="w-full p-4 rounded-xl border bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:text-white"><input id="fcr-total-weight" type="text" inputmode="numeric" placeholder="মোট মাংসের ওজন (কেজি)" class="w-full p-4 rounded-xl border bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:text-white"><button onclick="calculateFCR()" class="w-full p-4 bg-purple-600 text-white font-bold rounded-xl shadow-lg">হিসাব করুন</button><div id="fcr-result" class="hidden text-center pt-4 bg-gray-50 dark:bg-gray-800 rounded-xl p-4"><div class="text-4xl font-bold text-purple-600 dark:text-purple-400" id="fcr-value">0.0</div><p id="fcr-status-title" class="font-bold mt-2 dark:text-gray-300"></p><p id="fcr-total-feed-display" class="text-xs text-gray-400 mt-1"></p></div></div></div>
+        <div id="due-list-page" class="page bg-gray-50 dark:bg-gray-900"><header class="p-4 bg-white dark:bg-gray-800 border-b dark:border-gray-700 flex justify-between items-center"><div class="flex items-center"><button onclick="goBack()" class="mr-4"><span class="material-symbols-outlined dark:text-white">arrow_back</span></button><h1 class="text-xl font-bold dark:text-white">বাকির খাতা</h1></div><span id="total-due-amount" class="font-bold text-teal-700 dark:text-teal-400 px-3 py-1 bg-teal-50 dark:bg-teal-900/30 rounded-full
+
+                                                                                                                                                                                                                                                                                                                                                                                                                  
