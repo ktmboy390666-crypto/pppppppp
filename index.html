@@ -482,6 +482,18 @@
     <script src="daily_report.js"></script>
     
     <script src="medicines.js?v=2"></script>
+    <script>
+        // অফলাইন Service Worker চালু করা
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').then(reg => {
+                    console.log('অফলাইন মোড চালু হয়েছে! 🚀');
+                }).catch(err => {
+                    console.log('অফলাইন মোডে সমস্যা:', err);
+                });
+            });
+        }
+    </script>
 
 </body>
 </html>
