@@ -11,6 +11,17 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                for(let registration of registrations) { registration.unregister(); }
+            });
+        }
+        localStorage.removeItem('offline_medicines_data');
+        localStorage.removeItem('offline_shipments_');
+        localStorage.removeItem('offline_dues_');
+    </script>
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;500;700&display=swap" rel="stylesheet">
@@ -114,8 +125,7 @@
                             <h3 class="font-bold text-gray-700 dark:text-gray-200 text-sm">নোটিফিকেশন</h3>
                             <button onclick="clearNotifications()" class="text-xs text-teal-600 dark:text-teal-400 font-bold hover:underline">মুছে ফেলুন</button>
                         </div>
-                        <div id="notif-list" class="max-h-64 overflow-y-auto">
-                            </div>
+                        <div id="notif-list" class="max-h-64 overflow-y-auto"></div>
                     </div>
                 </div>
             </header>
@@ -307,7 +317,15 @@
                 document.getElementById('auth-page').classList.add('hidden');
                 document.getElementById('main-app').classList.remove('hidden');
                 document.getElementById('current-date').innerText = new Date().toLocaleDateString('bn-BD', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-                loadUserData();
+                
+                // পিওর অনলাইন ডাটা লোড
+                db.ref(`users/${uid}/shipments`).on('value', s => renderShipments(s.val()));
+                db.ref(`users/${uid}/due_list`).on('value', s => renderDue(s.val()));
+                medDb.ref('admin_scroll_text').on('value', s => {
+                    const el = document.getElementById('scrollText');
+                    if(el) el.innerText = s.val() || "কোনো আপডেট নেই";
+                });
+
             } else {
                 currentUser = null;
                 document.getElementById('auth-page').classList.remove('hidden');
@@ -345,37 +363,6 @@
         function handleRegister() { const e=document.getElementById('reg-email').value,p=document.getElementById('reg-pass').value; if(e&&p)auth.createUserWithEmailAndPassword(e,p).catch(err=>alert(err.message)); }
         function toggleAuthMode() { document.getElementById('login-form-container').classList.toggle('hidden'); document.getElementById('register-form-container').classList.toggle('hidden'); }
         function logoutUser() { auth.signOut(); }
-
-        // --- DATA LOADING (OFFLINE SUPPORTED) ---
-        function loadUserData() {
-            if(!currentUser) return;
-            const uid = currentUser.uid;
-
-            // অফলাইন ডাটা লোড
-            const offlineShipments = localStorage.getItem('offline_shipments_' + uid);
-            if(offlineShipments) renderShipments(JSON.parse(offlineShipments));
-
-            const offlineDues = localStorage.getItem('offline_dues_' + uid);
-            if(offlineDues) renderDue(JSON.parse(offlineDues));
-
-            // ফায়ারবেস ডাটা সিঙ্ক ও সেভ
-            db.ref(`users/${uid}/shipments`).on('value', s => {
-                const data = s.val();
-                if(data) localStorage.setItem('offline_shipments_' + uid, JSON.stringify(data));
-                renderShipments(data);
-            });
-            
-            db.ref(`users/${uid}/due_list`).on('value', s => {
-                const data = s.val();
-                if(data) localStorage.setItem('offline_dues_' + uid, JSON.stringify(data));
-                renderDue(data);
-            });
-
-            medDb.ref('admin_scroll_text').on('value', s => {
-                const el = document.getElementById('scrollText');
-                if(el) el.innerText = s.val() || "কোনো আপডেট নেই";
-            });
-        }
 
         function navigate(p) { document.querySelectorAll('.page').forEach(e=>e.classList.remove('page-visible')); document.getElementById(p).classList.add('page-visible'); pageHistory.push(p); document.getElementById('add-shipment-button-container').classList.toggle('hidden', !['dashboard','shipments-page'].includes(p)); }
         function goBack() { if(pageHistory.length>1) pageHistory.pop(); navigate(pageHistory[pageHistory.length-1]); pageHistory.pop(); }
@@ -466,18 +453,11 @@
 
         navigateToTab('dashboard');
     </script>
+    
     <script src="notifications.js"></script>
     <script src="stock.js"></script>
     <script src="daily_report.js"></script>
-    <script src="medicines.js?v=4"></script>
-    
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js');
-            });
-        }
-    </script>
+    <script src="medicines.js?v=6"></script>
 
 </body>
 </html>
