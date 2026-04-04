@@ -1,89 +1,81 @@
-/* 💊 MULTI-BIRD MEDICINE MANAGER (Search Feature Added) */
+/* 💊 MULTI-BIRD MEDICINE MANAGER (OFFLINE SUPPORTED) */
 
 let allMedicinesData = [];
 let currentBirdType = 'broiler'; 
 
-// ১. জাতের নাম ঠিক করার ফাংশন
 function normalizeBirdType(type) {
     if (!type) return 'broiler';
     type = String(type).trim().toLowerCase(); 
-    
     if (type.includes('ব্রয়লার') || type.includes('বয়লার') || type.includes('broiler')) return 'broiler';
     if (type.includes('কালার') || type.includes('color')) return 'color_bird';
     if (type.includes('সোনালি') || type.includes('সোনালী') || type.includes('sonali')) return 'sonali';
     if (type.includes('দেশি') || type.includes('দেশী') || type.includes('deshi')) return 'deshi';
-    
     return 'broiler'; 
 }
 
-// ২. ডাটাবেস থেকে ডাটা আনা
 function initMedicines() {
     const container = document.getElementById('medicineListContainer');
     if(container) container.innerHTML = `<div class="text-center py-10 opacity-50">লোড হচ্ছে...</div>`;
 
+    // ⚡ অফলাইন ডাটা লোড (নেট না থাকলেও ওষুধ দেখাবে)
+    const offlineMeds = localStorage.getItem('khamar_meds_db');
+    if (offlineMeds) {
+        allMedicinesData = JSON.parse(offlineMeds);
+        renderFilteredMedicines();
+    }
+
+    // 🌐 অনলাইন ডাটা লোড ও সেভ
     if (typeof medDb !== 'undefined') {
         medDb.ref('admin_medicines').on('value', snapshot => {
             const data = snapshot.val();
-            allMedicinesData = [];
-            
+            let tempMeds = [];
             if (data) {
                 Object.values(data).forEach(item => {
                     item.internalBirdType = normalizeBirdType(item.birdType);
                     item.day = String(item.day || "1"); 
-                    allMedicinesData.push(item);
+                    tempMeds.push(item);
                 });
             }
+            allMedicinesData = tempMeds;
+            localStorage.setItem('khamar_meds_db', JSON.stringify(allMedicinesData)); // সেভ
             renderFilteredMedicines();
         });
     }
 }
 
-// ৩. বাটনে ক্লিক করলে জাত পরিবর্তন
 function setBirdFilter(rawType) {
     currentBirdType = normalizeBirdType(rawType);
-
-    // 💡 ম্যাজিক: ট্যাব বদলালে সার্চ বক্স অটোমেটিক খালি হয়ে যাবে!
     const searchInput = document.getElementById('medicineSearch');
     if(searchInput) searchInput.value = '';
 
-    // বাটনের কালার ও স্টাইল আপডেট
     document.querySelectorAll('.bird-filter-btn').forEach(btn => {
         const btnType = normalizeBirdType(btn.dataset.type);
-        
         if(btnType === currentBirdType) {
             btn.className = "bird-filter-btn px-4 py-2 rounded-full bg-teal-700 text-white text-xs font-bold whitespace-nowrap shadow-md transition transform scale-105";
         } else {
             btn.className = "bird-filter-btn px-4 py-2 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 text-xs font-bold whitespace-nowrap transition";
         }
     });
-
     renderFilteredMedicines();
 }
 
-// ৪. লিস্ট স্ক্রিনে দেখানো (সার্চ ফিল্টার সহ)
 function renderFilteredMedicines() {
     const container = document.getElementById('medicineListContainer');
     const searchInput = document.getElementById('medicineSearch');
-    
-    // সার্চ বক্সে কিছু লিখলে সেটা ছোট হাতের অক্ষরে ধরে নিবে (যাতে বড়/ছোট হাতের জন্য ঝামেলা না হয়)
     const searchTerm = searchInput ? searchInput.value.trim().toLowerCase() : '';
     
     if(!container) return;
     container.innerHTML = '';
 
-    // প্রথম ফিল্টার: কোন ট্যাবে আছি (যেমন: ব্রয়লার)
     let filtered = allMedicinesData.filter(m => m.internalBirdType === currentBirdType);
 
-    // দ্বিতীয় ফিল্টার: সার্চ বক্সে কিছু লেখা থাকলে সেটা খুঁজবে
     if (searchTerm !== '') {
         filtered = filtered.filter(item => {
-            // ওষুধের নাম, দিন, সময় বা নোটে সার্চের লেখাটা আছে কিনা চেক করবে
             const searchString = `${item.medicine} ${item.day} ${item.time} ${item.note || ''}`.toLowerCase();
             return searchString.includes(searchTerm);
         });
     }
 
-    // যদি কিছু না পাওয়া যায়
     if (filtered.length === 0) {
         if (searchTerm !== '') {
             container.innerHTML = `<div class="text-center py-16 opacity-50"><span class="material-symbols-outlined text-5xl mb-2 text-teal-600">search_off</span><p>কোনো ফলাফল পাওয়া যায়নি!</p></div>`;
@@ -93,14 +85,10 @@ function renderFilteredMedicines() {
         return;
     }
 
-    // দিন অনুযায়ী গ্রুপ করা
     const grouped = {};
     filtered.forEach(item => {
         const days = String(item.day).split("→").map(d => d.trim());
-        days.forEach(d => {
-            if(!grouped[d]) grouped[d] = [];
-            grouped[d].push(item);
-        });
+        days.forEach(d => { if(!grouped[d]) grouped[d] = []; grouped[d].push(item); });
     });
 
     const dayStyles = [
@@ -132,6 +120,4 @@ function renderFilteredMedicines() {
         container.appendChild(sec);
     });
 }
-
-// অ্যাপ চালু হওয়ার সাথে সাথেই ডাটা লোড করবে
 setTimeout(initMedicines, 500); 
