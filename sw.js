@@ -1,27 +1,19 @@
-const CACHE_NAME = 'khamar-app-v1';
-const urlsToCache = [
-    './',
-    './index.html',
-    './medicines.js',
-    './stock.js',
-    './daily_report.js',
-    './notifications.js'
-];
+const CACHE_NAME = 'khamar-pro-v1';
 
-// ইনস্টল করার সময় ফাইলগুলো ক্যাশে (Cache) সেভ করবে
+// ইনস্টল করার সময় পেজগুলো সেভ করবে
 self.addEventListener('install', event => {
     event.waitUntil(
-        caches.open(CACHE_NAME)
-            .then(cache => cache.addAll(urlsToCache))
+        caches.open(CACHE_NAME).then(cache => {
+            return cache.addAll(['./', './index.html', './medicines.js', './stock.js', './daily_report.js']);
+        })
     );
 });
 
-// ইন্টারনেট না থাকলে ক্যাশ থেকে ফাইল দেখাবে
+// ইন্টারনেট থাকলে নেট থেকে আনবে, না থাকলে সেভ করা ফাইল দেখাবে
 self.addEventListener('fetch', event => {
     event.respondWith(
-        caches.match(event.request)
-            .then(response => {
-                return response || fetch(event.request);
-            })
+        fetch(event.request).catch(() => {
+            return caches.match(event.request);
+        })
     );
 });
