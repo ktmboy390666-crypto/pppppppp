@@ -1,4 +1,4 @@
-/* 💊 MULTI-BIRD MEDICINE MANAGER (OFFLINE SUPPORTED) */
+/* 💊 MULTI-BIRD MEDICINE MANAGER (Pure Online, Search, Color Fix) */
 
 let allMedicinesData = [];
 let currentBirdType = 'broiler'; 
@@ -6,10 +6,12 @@ let currentBirdType = 'broiler';
 function normalizeBirdType(type) {
     if (!type) return 'broiler';
     type = String(type).trim().toLowerCase(); 
+    
     if (type.includes('ব্রয়লার') || type.includes('বয়লার') || type.includes('broiler')) return 'broiler';
     if (type.includes('কালার') || type.includes('color')) return 'color_bird';
     if (type.includes('সোনালি') || type.includes('সোনালী') || type.includes('sonali')) return 'sonali';
     if (type.includes('দেশি') || type.includes('দেশী') || type.includes('deshi')) return 'deshi';
+    
     return 'broiler'; 
 }
 
@@ -17,18 +19,11 @@ function initMedicines() {
     const container = document.getElementById('medicineListContainer');
     if(container) container.innerHTML = `<div class="text-center py-10 opacity-50">লোড হচ্ছে...</div>`;
 
-    // ⚡ অফলাইন ডাটা লোড (নেট না থাকলেও ওষুধ দেখাবে)
-    const offlineMeds = localStorage.getItem('khamar_meds_db');
-    if (offlineMeds) {
-        allMedicinesData = JSON.parse(offlineMeds);
-        renderFilteredMedicines();
-    }
-
-    // 🌐 অনলাইন ডাটা লোড ও সেভ
     if (typeof medDb !== 'undefined') {
         medDb.ref('admin_medicines').on('value', snapshot => {
             const data = snapshot.val();
             let tempMeds = [];
+            
             if (data) {
                 Object.values(data).forEach(item => {
                     item.internalBirdType = normalizeBirdType(item.birdType);
@@ -37,7 +32,6 @@ function initMedicines() {
                 });
             }
             allMedicinesData = tempMeds;
-            localStorage.setItem('khamar_meds_db', JSON.stringify(allMedicinesData)); // সেভ
             renderFilteredMedicines();
         });
     }
@@ -45,6 +39,7 @@ function initMedicines() {
 
 function setBirdFilter(rawType) {
     currentBirdType = normalizeBirdType(rawType);
+
     const searchInput = document.getElementById('medicineSearch');
     if(searchInput) searchInput.value = '';
 
@@ -56,6 +51,7 @@ function setBirdFilter(rawType) {
             btn.className = "bird-filter-btn px-4 py-2 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 text-xs font-bold whitespace-nowrap transition";
         }
     });
+
     renderFilteredMedicines();
 }
 
@@ -88,7 +84,10 @@ function renderFilteredMedicines() {
     const grouped = {};
     filtered.forEach(item => {
         const days = String(item.day).split("→").map(d => d.trim());
-        days.forEach(d => { if(!grouped[d]) grouped[d] = []; grouped[d].push(item); });
+        days.forEach(d => {
+            if(!grouped[d]) grouped[d] = [];
+            grouped[d].push(item);
+        });
     });
 
     const dayStyles = [
@@ -120,4 +119,5 @@ function renderFilteredMedicines() {
         container.appendChild(sec);
     });
 }
+
 setTimeout(initMedicines, 500); 
